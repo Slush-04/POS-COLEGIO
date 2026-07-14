@@ -1,0 +1,157 @@
+=============================================================
+  LÓGICA DEL PANEL POS (PUNTO DE VENTA)
+  Sistema: ProBill Management
+  Archivo generado: 2026-07-11
+=============================================================
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. ¿QUÉ ES EL POS?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+El Panel POS (Punto de Venta) permite cobrar o cargar a
+cuenta cualquier producto o servicio del colegio de manera
+rápida desde una sola pantalla.
+
+Se divide en DOS columnas principales:
+  - Columna IZQUIERDA: buscador de clientes, filtros por
+    categoría (Cursos, Libros, Cuotas, Anual) y listado de
+    artículos o deudas de cuotas del cliente.
+  - Columna DERECHA: "Ticket Actual" con el desglose del
+    carrito de compras, subtotal, total y botones para
+    finalizar la venta.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. ARCHIVOS INVOLUCRADOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Frontend:
+  src/components/POSView.tsx          → Interfaz gráfica del POS y lógica de carrito.
+
+Backend:
+  backend/routers/pos.py              → Lógica de checkout y procesamiento del carrito.
+  backend/routers/clientes.py         → API para buscar clientes.
+  backend/routers/cursos.py           → API para listar cursos y obtener participantes.
+  backend/routers/inventario.py       → API para ver y modificar stock de inventario.
+  backend/routers/cuotas.py           → API para obtener cuotas pendientes del cliente.
+  backend/routers/pagos.py            → Helpers contables para registrar abonos y conciliar deudas.
+
+Base de Datos:
+  sistema_colegio.db (Tablas involucradas):
+    - clientes         (Lectura)
+    - cursos           (Lectura de cupos y precios)
+    - inscripciones    (Escritura: cuando se vende un curso)
+    - inventario       (Escritura: reducción de stock)
+    - cuotas_asociados (Escritura: cuando se cobra una cuota generada previamente)
+    - deudas           (Escritura: crea las cuentas por cobrar asociadas a la transacción)
+    - pagos_deudas     (Escritura: registro del cobro inmediato en "Cobrar")
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. FLUJO GENERAL PASO A PASO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PASO 1 — Buscar y Asociar un Cliente (Opcional pero Recomendado)
+  - El cajero escribe el nombre o teléfono del cliente.
+  - Se llama al endpoint:
+      GET http://localhost:8000/api/clientes/buscar?q={texto}
+  - Si se asocia un cliente:
+      a) Se desbloquean las categorías "Cuota Mensual" y "Cuota Anual" (solo muestran cuotas de este cliente).
+      b) Los cursos aplican tarifas dinámicas para este cliente.
+  - Si NO se asocia un cliente (Venta General):
+      a) Los cursos aplican la tarifa para "Público General".
+      b) No se pueden comprar cuotas pendientes.
+      c) No se puede utilizar el botón "Cargar a Cuenta".
+
+PASO 2 — Seleccionar Categoría / Filtro de Artículos
+  El cajero selecciona una de las siguientes opciones:
+    - Cursos: Trae cursos activos. Si se marca "Incluir cursos históricos", se muestran también los pasados.
+    - Libros: Trae productos del inventario categorizados como 'Libros'.
+    - Cuota Mensual: Trae cuotas mensuales generadas para el cliente con estado PENDIENTE.
+    - Cuota Anual: Trae cuotas anuales generadas para el cliente con estado PENDIENTE.
+    - Sin Categoría (Búsqueda general): Busca todos los productos activos en el inventario global.
+
+PASO 3 — Tarifas Dinámicas para Cursos
+  Al agregar un curso al carrito, el sistema detecta de forma automática la tarifa del cliente:
+    - Asociado Estudiante    → Aplica precio_estudiante
+    - Asociado Externo       → Aplica precio_asociado_externo
+    - Asociado               → Aplica precio_asociado
+    - Colaborador            → Aplica precio_colaborador
+    - Público General        → Aplica precio_general
+
+PASO 4 — Gestión del Carrito
+  - Al añadir un artículo, se valida que haya stock suficiente (si es del inventario).
+  - Cada artículo en el carrito tiene un precio editable en tiempo real.
+  - El total de la compra se recalcula al instante.
+
+PASO 5 — Finalizar la Compra (Checkout)
+  El sistema ofrece dos alternativas de finalización de compra enviando el payload al endpoint:
+      POST http://localhost:8000/api/pos/checkout
+
+  1. Botón "Cobrar" (tipo_pago = "pago"):
+     - Se asume cobro inmediato (método de pago por defecto: efectivo).
+     - Descuenta stock si aplica.
+     - Crea las inscripciones de cursos como PAGADO.
+     - Registra la deuda en la tabla `deudas` como PAGADO y crea el abono en `pagos_deudas`.
+
+  2. Botón "Cargar a Cuenta" (tipo_pago = "cuenta"):
+     - El cliente adquiere el compromiso de pago posterior (cuenta por cobrar).
+     - Requiere obligatoriamente un cliente seleccionado.
+     - Crea las inscripciones y registros en estado PENDIENTE.
+     - Crea la deuda en `deudas` con estado PENDIENTE para que sea visible en "Cuentas por Cobrar".
+     - No genera registros en `pagos_deudas` en este momento.
+     - ⚠️ No es aplicable para cobrar cuotas mensuales ni anuales (estas siempre deben ser liquidadas directamente mediante el botón "Cobrar").
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. REGLAS DE NEGOCIO Y VALIDACIONES EN CHECKOUT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Cuando el backend recibe la petición de checkout, ejecuta lo siguiente:
+  1. Valida que el carrito contenga ítems, cantidades mayores a cero y que los precios no sean negativos.
+  2. Valida que la suma de (precio * cantidad) de cada ítem en el backend coincida exactamente con el total de la compra enviado por el frontend.
+  3. Valida la disponibilidad de cupos en los cursos (`capacidad_max` vs `inscritos`).
+  4. Valida el stock actual del inventario para productos físicos.
+  5. Para cuotas pendientes:
+     - Valida que la cuota tenga saldo pendiente real.
+     - Valida que el abono no supere el saldo pendiente de esa cuota.
+     - Cambia el estado de la cuota en `cuotas_asociados` a PAGADO al concretarse el cobro.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. AJUSTE RÁPIDO DE STOCK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Para facilitar la administración diaria, los productos de inventario muestran su stock actual en el POS. Si el cajero cuenta con permisos, puede dar clic en el ícono del lápiz en la tarjeta del producto para abrir un prompt e ingresar un nuevo valor de stock, llamando a:
+  PATCH http://localhost:8000/api/inventario/{id}/stock
+  Cuerpo: { "nuevo_stock": número }
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. RESUMEN DE LA CONEXIÓN (DIAGRAMA CONCEPTUAL)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  [POSView.tsx] 
+       │
+       ├─► GET /api/clientes/buscar (Para autocompletar clientes)
+       ├─► GET /api/cursos           (Para listar los cursos)
+       ├─► GET /api/inventario       (Para listar productos/libros)
+       ├─► GET /api/cuotas/...       (Para consultar cuotas pendientes del cliente)
+       │
+       └─► POST /api/pos/checkout   (Para procesar venta y guardar en DB)
+                 │
+                 ▼
+          [backend/routers/pos.py]
+                 │
+      ┌──────────┼──────────┐
+      ▼          ▼          ▼
+   (CURSO)  (INVENTARIO) (CUOTAS)
+      │          │          │
+   Inserta    Descuenta  Actualiza cuota
+   inscrip-   stock de   a PAGADO
+   ción       producto   y crea abono
+   + Deuda    + Deuda    centralizado
+   + Abono*   + Abono*   en deudas
+      │          │          │
+      └──────────┴──────────┘
+                 │
+          Confirmar y Guardar (Commit SQLite)
+
+  * El abono solo se registra si se selecciona la opción "Cobrar".
+
+=============================================================

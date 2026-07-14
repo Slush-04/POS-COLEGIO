@@ -1,0 +1,256 @@
+INDICACIONES PARA CORREGIR Y PREPARAR EL SISTEMA DE DEUDAS
+
+Objetivo:
+Preparar el sistema para manejar cualquier tipo de deuda futura sin depender del truco actual de IDs positivos y negativos.
+
+Actualmente:
+- ID positivo = inscripción de curso.
+- ID negativo = cuota.
+Esto debe reemplazarse por un modelo más claro y escalable.
+
+Nueva idea:
+Toda deuda debe tener un ID propio en una tabla general llamada deudas.
+Todo pago debe registrarse en una tabla general llamada pagos_deudas.
+
+1. Mantener una sola base de datos
+No crear otra base de datos.
+Todo debe seguir dentro de:
+
+sistema_colegio.db
+
+2. Crear tabla general de deudas
+Agregar una tabla nueva llamada deudas.
+
+Estructura recomendada:
+
+CREATE TABLE IF NOT EXISTS deudas (
+  id_deuda INTEGER PRIMARY KEY AUTOINCREMENT,
+  id_cliente INTEGER NOT NULL,
+  tipo_deuda TEXT NOT NULL,
+  id_referencia INTEGER,
+  concepto TEXT NOT NULL,
+  monto_total REAL NOT NULL,
+  estado TEXT DEFAULT 'PENDIENTE',
+  fecha_generacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(id_cliente) REFERENCES clientes(id_cliente)
+);
+
+3. Crear tabla general de pagos
+Agregar una tabla llamada pagos_deudas.
+
+Estructura recomendada:
+
+CREATE TABLE IF NOT EXISTS pagos_deudas (
+  id_pago_deuda INTEGER PRIMARY KEY AUTOINCREMENT,
+  id_deuda INTEGER NOT NULL,
+  id_cliente INTEGER NOT NULL,
+  monto_pagado REAL NOT NULL,
+  metodo_pago TEXT NOT NULL,
+  fecha_pago DATETIME DEFAULT CURRENT_TIMESTAMP,
+  observacion TEXT,
+  FOREIGN KEY(id_deuda) REFERENCES deudas(id_deuda),
+  FOREIGN KEY(id_cliente) REFERENCES clientes(id_cliente)
+);
+
+4. Definir tipos de deuda
+Usar tipo_deuda para identificar el origen de la deuda.
+
+Tipos iniciales recomendados:
+CURSO
+CUOTA_MENSUAL
+CUOTA_ANUAL
+CUOTA_EXTRAORDINARIA
+PRESTAMO
+OTRO
+
+Ejemplo:
+tipo_deuda = CURSO
+id_referencia = id_inscripcion
+
+tipo_deuda = CUOTA_MENSUAL
+id_referencia = id_cuota
+
+5. Regla para calcular saldo
+El saldo pendiente de cualquier deuda debe calcularse así:
+
+saldo_pendiente = monto_total - suma de pagos_deudas.monto_pagado de esa id_deuda
+
+Si saldo_pendiente es 0:
+estado = PAGADO
+
+Si saldo_pendiente es mayor a 0:
+estado = PENDIENTE
+
+6. Cambiar el flujo de pago
+El frontend ya no debe mandar solo id_inscripcion ni usar IDs negativos para cuotas.
+
+Debe mandar:
+
+id_deuda
+monto_abono
+metodo_pago
+observacion
+
+Ejemplo:
+
+{
+  "id_deuda": 15,
+  "monto_abono": 200,
+  "metodo_pago": "transferencia",
+  "observacion": "Primer abono"
+}
+
+7. Actualizar backend de pagos
+Crear o modificar endpoint para registrar pagos contra deudas generales.
+
+Ruta sugerida:
+
+POST /api/pagos/deudas/abono
+
+Flujo esperado:
+1. Recibir id_deuda, monto_abono, metodo_pago y observacion.
+2. Buscar la deuda en deudas.
+3. Sumar pagos existentes en pagos_deudas.
+4. Calcular saldo actual.
+5. Validar que monto_abono sea mayor a 0.
+6. Validar que monto_abono no exceda el saldo actual.
+7. Insertar el pago en pagos_deudas.
+8. Si la deuda queda liquidada, actualizar deudas.estado a PAGADO.
+9. Si queda saldo pendiente, mantener deudas.estado como PENDIENTE.
+10. Regresar saldo actualizado.
+
+8. Actualizar creación de deudas desde cursos
+Cuando se registre una inscripción de curso con saldo pendiente, también crear un registro en deudas.
+
+Ejemplo:
+tipo_deuda = CURSO
+id_referencia = id_inscripcion
+concepto = nombre del curso
+monto_total = monto_total de la inscripción
+estado = PENDIENTE
+
+Si la inscripción se registra como PAGADA desde el inicio:
+- crear deuda en estado PAGADO y registrar pago en pagos_deudas.
+
+9. Actualizar creación de deudas desde cuotas
+Cuando se genere una cuota mensual o anual, también crear un registro en deudas.
+
+Ejemplo cuota mensual:
+tipo_deuda = CUOTA_MENSUAL
+id_referencia = id_cuota
+concepto = Cuota mensual 07/2026
+monto_total = monto de la cuota
+estado = PENDIENTE
+
+Ejemplo cuota anual:
+tipo_deuda = CUOTA_ANUAL
+id_referencia = id_cuota
+concepto = Cuota anual 2026
+monto_total = monto de la cuota
+estado = PENDIENTE
+
+10. Preparar futuras deudas
+Para préstamo, multa o cuota extraordinaria, usar la misma tabla deudas.
+
+
+Ejemplo cuota extraordinaria:
+tipo_deuda = CUOTA_EXTRAORDINARIA
+id_referencia = NULL
+concepto = Cuota extraordinaria mantenimiento
+monto_total = 800
+estado = PENDIENTE
+
+11. Actualizar consulta general de deudas
+Modificar el endpoint:
+
+GET /api/pagos/deudas
+
+Ya no debe juntar manualmente inscripciones y cuotas.
+Debe leer principalmente desde la tabla deudas.
+
+Debe mostrar por cliente:
+- total de deudas
+- total abonado
+- saldo pendiente
+- deuda más antigua pendiente
+- estado
+
+12. Actualizar detalle de deuda por cliente
+Modificar el endpoint:
+
+GET /api/pagos/deudas/{id_cliente}
+
+Debe devolver las deudas pendientes del cliente desde la tabla deudas.
+
+Cada registro debe incluir:
+id_deuda
+tipo_deuda
+concepto
+monto_total
+abonado
+saldo_pendiente
+estado
+fecha_generacion
+
+13. Actualizar historial de movimientos
+Modificar el endpoint:
+
+GET /api/pagos/movimientos/{id_cliente}
+
+Debe leer desde pagos_deudas.
+
+Debe mostrar:
+fecha_pago
+concepto de la deuda
+tipo_deuda
+metodo_pago real
+monto_pagado real
+observacion
+
+14. Mantener tablas existentes
+No borrar de inmediato:
+inscripciones
+cuotas_asociados
+pagos_transacciones
+
+Estas tablas pueden seguir funcionando como tablas de origen o detalle.
+
+Pero la administración de deuda y pagos debe migrar gradualmente a:
+deudas
+pagos_deudas
+
+15. Crear migración
+Crear script de migración que:
+1. Cree deudas si no existe.
+2. Cree pagos_deudas si no existe.
+3. Genere deudas para inscripciones pendientes existentes.
+4. Genere deudas para cuotas pendientes existentes.
+5. Evite duplicados.
+
+Para evitar duplicados, usar combinación:
+tipo_deuda + id_referencia
+
+16. Actualizar base inicial
+Agregar las tablas deudas y pagos_deudas en:
+
+backend/database.py
+
+Así cualquier instalación nueva ya queda preparada.
+
+17. Actualizar frontend
+Modificar los módulos de deudas y pagos para que usen id_deuda.
+
+Eliminar dependencia de:
+id_inscripcion negativo = cuota
+
+El modal de pago debe recibir:
+id_deuda
+concepto
+saldo_pendiente
+
+Prioridad:
+Alta.
+
+Motivo:
+Este cambio elimina una lógica frágil basada en IDs positivos y negativos.
+Prepara el sistema para manejar cursos, cuotas, préstamos, cuotas extraordinarias, multas y cualquier otro cargo futuro con una sola lógica contable.

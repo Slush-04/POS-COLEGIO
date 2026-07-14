@@ -1,0 +1,116 @@
+INDICACIONES PARA CORREGIR PAGOS PARCIALES DE CUOTAS
+
+Objetivo:
+Corregir el manejo de pagos de cuotas de asociados para que el sistema acepte abonos parciales, mantenga historial correcto y calcule saldos reales.
+
+1. Mantener una sola base de datos
+No crear otra base de datos.
+Todo debe seguir dentro de la base actual:
+
+sistema_colegio.db
+
+2. Crear una nueva tabla dentro de la misma base
+Crear una tabla llamada pagos_cuotas.
+
+Estructura recomendada:
+
+CREATE TABLE IF NOT EXISTS pagos_cuotas (
+  id_pago_cuota INTEGER PRIMARY KEY AUTOINCREMENT,
+  id_cuota INTEGER NOT NULL,
+  id_cliente INTEGER NOT NULL,
+  monto_pagado REAL NOT NULL,
+  metodo_pago TEXT NOT NULL,
+  fecha_pago DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  observacion TEXT,
+  FOREIGN KEY(id_cuota) REFERENCES cuotas_asociados(id_cuota),
+  FOREIGN KEY(id_cliente) REFERENCES clientes(id_cliente)
+);
+
+3. Regla para calcular saldo pendiente
+El saldo pendiente de una cuota debe calcularse así:
+
+saldo pendiente = monto original de la cuota - suma de pagos registrados en pagos_cuotas
+
+Ejemplo:
+Cuota: $500
+Pago 1: $200
+Saldo pendiente: $300
+
+Pago 2: $300
+Saldo pendiente: $0
+Estado: PAGADO
+
+4. Corregir el pago de cuotas
+Cuando el frontend mande un pago con id_inscripcion negativo:
+
+id_inscripcion = -id_cuota
+
+el backend debe entender que es una cuota.
+
+Flujo esperado:
+1. Convertir el ID negativo a id_cuota.
+2. Buscar la cuota en cuotas_asociados.
+3. Sumar los pagos existentes de esa cuota en pagos_cuotas.
+4. Calcular el saldo actual.
+5. Validar que el nuevo abono sea mayor a 0.
+6. Validar que el nuevo abono no exceda el saldo actual.
+7. Insertar el abono en pagos_cuotas.
+8. Si el saldo queda en 0, marcar la cuota como PAGADO.
+9. Si todavía queda saldo, dejarla como PENDIENTE.
+10. Guardar el método real de pago y la observación.
+
+5. No usar pagos_transacciones para cuotas
+No guardar pagos de cuotas en pagos_transacciones con id_inscripcion = NULL.
+
+La tabla pagos_transacciones debe quedar solo para pagos de cursos o inscripciones.
+
+6. Actualizar consulta general de deudas
+Modificar el endpoint:
+
+/api/pagos/deudas
+
+Las cuotas pendientes deben sumar el saldo real:
+
+monto de cuota - suma de pagos_cuotas
+
+No deben sumar siempre el monto completo de la cuota si ya tiene abonos.
+
+7. Actualizar detalle de deuda por cliente
+Modificar el endpoint:
+
+/api/pagos/deudas/{id_cliente}
+
+Cada cuota debe mostrar:
+
+monto_total = monto original de la cuota
+abonado = suma de pagos registrados en pagos_cuotas
+saldo_pendiente = monto_total - abonado
+estado_pago = PENDIENTE o PAGADO
+
+8. Actualizar historial de movimientos
+Modificar el endpoint:
+
+/api/pagos/movimientos/{id_cliente}
+
+Los pagos de cuotas deben leerse desde pagos_cuotas, no desde cuotas_asociados.
+
+Debe mostrar:
+fecha_pago
+concepto, por ejemplo: "Pago Cuota Mensual - 07/2026"
+metodo_pago real
+monto_pagado real
+observacion
+
+9. Actualizar la base inicial
+Agregar la creación de pagos_cuotas en:
+
+backend/database.py
+
+Esto es para que una instalación nueva ya tenga la tabla.
+
+10. Crear o actualizar migración
+Crear o actualizar un script de migración que agregue pagos_cuotas si no existe.
+
+Importante:
+La migración no debe borrar datos existentes.
+

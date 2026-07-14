@@ -1,0 +1,106 @@
+========================================================================
+GUÍA DE CONFIGURACIÓN E IMPLEMENTACIÓN DE PAGINACIÓN UNIVERSAL
+========================================================================
+
+Este documento explica cómo personalizar la paginación y cómo adaptarla
+fácilmente a cualquier otra tabla o vista del sistema.
+
+------------------------------------------------------------------------
+1. CÓMO MODIFICAR LAS CONFIGURACIONES (10, 15, 20, 50, 100, ETC.)
+------------------------------------------------------------------------
+Toda la configuración centralizada se encuentra en el archivo:
+`src/components/ui/configuracion.ts`
+
+Si deseas cambiar las opciones de visualización o los valores por defecto:
+1. Abre `src/components/ui/configuracion.ts`.
+2. Modifica el campo `defaultLimit` para cambiar la cantidad inicial de filas.
+3. Agrega o remueve números en la lista `availableLimits` (por ejemplo, `[5, 10, 15, 20, 30]`).
+4. Si necesitas cambiar los textos de la paginación (inglés u otro idioma), edita el objeto `labels`.
+
+------------------------------------------------------------------------
+2. CÓMO IMPLEMENTAR ESTA PAGINACIÓN EN OTRAS TABLAS (CLIENT-SIDE)
+------------------------------------------------------------------------
+Si tienes una nueva tabla en React con una lista completa de datos y
+deseas paginarla localmente, sigue estos pasos:
+
+PASO A: Importar el componente y la configuración
+--------------------------------------------------
+Agrega los siguientes imports al inicio de tu archivo de vista:
+```typescript
+import { Paginacion } from "../ui/Paginacion"; // Ajusta la ruta relativa
+import { PAGINATION_CONFIG } from "../ui/configuracion"; // Ajusta la ruta relativa
+```
+
+PASO B: Declarar los estados de paginación
+------------------------------------------
+Dentro de tu componente React, define los estados de la página actual y
+el límite de filas a mostrar por página usando los valores globales:
+```typescript
+const [currentPage, setCurrentPage] = useState(1);
+const [itemsPerPage, setItemsPerPage] = useState(PAGINATION_CONFIG.defaultLimit);
+```
+
+PASO C: Resetear la página al filtrar o buscar
+----------------------------------------------
+Si tienes filtros o barras de búsqueda, asegúrate de reiniciar a la página 1
+cuando estos cambien para evitar páginas vacías:
+```typescript
+useEffect(() => {
+  setCurrentPage(1);
+}, [searchTerm, statusFilter]); // Agrega aquí todas tus variables de filtros
+```
+
+PASO D: Calcular límites y cortar la lista de datos
+---------------------------------------------------
+Suponiendo que tu lista completa filtrada y ordenada se llama `datosCompletos`:
+```typescript
+const totalItems = datosCompletos.length;
+const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+const startIndex = (currentPage - 1) * itemsPerPage;
+const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+
+// Utiliza esta lista recortada para hacer el .map() en tu <tbody>
+const datosPaginados = datosCompletos.slice(startIndex, endIndex);
+```
+
+PASO E: Renderizar el componente <Paginacion />
+-----------------------------------------------
+Al final de la tabla (dentro de la misma caja o contenedor de diseño), 
+remueve los controles de paginación viejos y escribe:
+```tsx
+<Paginacion
+  currentPage={currentPage}
+  totalPages={totalPages}
+  totalItems={totalItems}
+  itemsPerPage={itemsPerPage}
+  isLoading={false}
+  onPageChange={(nuevaPagina) => setCurrentPage(nuevaPagina)}
+  onItemsPerPageChange={(nuevoLimite) => {
+    setItemsPerPage(nuevoLimite);
+    setCurrentPage(1); // Regresar a la página 1 al cambiar el límite
+  }}
+/>
+```
+
+------------------------------------------------------------------------
+3. CÓMO IMPLEMENTAR ESTA PAGINACIÓN EN EL BACKEND (SERVER-SIDE)
+------------------------------------------------------------------------
+Para tablas con gran cantidad de registros, la paginación del servidor es preferible.
+Consiste en lo siguiente:
+1. Enviar los parámetros desde el Frontend en la llamada fetch:
+   `fetch("http://localhost:8000/api/endpoint?page=" + currentPage + "&limit=" + itemsPerPage)`
+2. En el Backend (FastAPI / Python), recibir `page: int` y `limit: int`.
+3. Calcular cuántos omitir en la consulta SQLite o base de datos:
+   `offset = (page - 1) * limit`
+4. Ejecutar la consulta con `LIMIT limit OFFSET offset`.
+5. Retornar los datos en una estructura JSON como:
+   {
+     "data": [... registros de la página ...],
+     "meta": {
+       "total": total_registros_sin_paginar,
+       "page": page,
+       "limit": limit,
+       "totalPages": total_paginas
+     }
+   }
+========================================================================

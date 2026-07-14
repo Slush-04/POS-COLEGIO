@@ -1,0 +1,164 @@
+========================================================================
+LOGICA DEL SISTEMA DE CUOTAS DE ASOCIADOS
+========================================================================
+
+Este documento detalla el funcionamiento, reglas de negocio, flujo contable
+y la conexión de datos correspondiente al módulo de Cuotas de Asociados 
+del sistema.
+
+------------------------------------------------------------------------
+1. MIEMBROS ELEGIBLES
+------------------------------------------------------------------------
+* Solo los clientes cuyo tipo de cliente ("tipo_cliente") sea "asociado"
+  (evaluado de forma insensible a mayúsculas/minúsculas como "Asociado"
+  o "asociado") son elegibles para tener cuotas.
+* Las cuotas solo se autogeneran para asociados con "estatus_operativo"
+  igual a "Activo".
+* Carga Inicial al Registrarse:
+  Cuando se registra un cliente nuevo cuyo tipo es 'asociado' y su
+  estatus operativo es 'Activo', el sistema le genera y carga
+  automáticamente la cuota mensual de $500.00 correspondiente al
+  mes actual en curso (por ejemplo, si se registra en Julio,
+  se le carga la cuota de Julio de inmediato en su cuenta).
+
+------------------------------------------------------------------------
+2. TIPOS DE CUOTAS
+------------------------------------------------------------------------
+El sistema gestiona dos tipos de cuotas periódicas:
+
+A. CUOTA MENSUAL
+   * Costo estándar: $500.00 MXN.
+   * Frecuencia: Mensual. Se genera al inicio del mes correspondiente.
+   * Estados posibles de pago:
+     - 'PENDIENTE': Aún tiene saldo pendiente por pagar.
+     - 'PAGADO': Se ha liquidado al 100% el monto.
+     - 'EXENTO': El cliente pagó la Anualidad y está exento de pagar este mes.
+
+B. CUOTA ANUAL
+   * Costo estándar: Determinado por configuración en el Punto de Venta 
+     (comúnmente equivalente a $5,000.00 MXN o lo que determine la caja).
+   * Frecuencia: Anual.
+   * Regla de Exención: Pagar la anualidad exenta los 12 meses del año.
+
+------------------------------------------------------------------------
+3. REGLAS ESPECIALES DE EXENCIÓN (ANUALIDAD)
+------------------------------------------------------------------------
+Cuando un asociado realiza el pago de una cuota de tipo "Anual", el sistema 
+aplica una regla de tolerancia temporal para exentar las cuotas mensuales:
+
+* Periodo de pago anticipado (Septiembre a Diciembre):
+  Si el pago anual se realiza en este periodo (mes >= 9), la exención se 
+  aplica para el SIGUIENTE año (Año Actual + 1).
+* Periodo de año nuevo (Enero a Febrero) o estándar (Marzo a Agosto):
+  Si el pago se realiza en este periodo (mes <= 8), la exención se aplica 
+  para el año ACTUAL.
+
+Efecto de la Exención:
+1. Al registrarse la anualidad como "PAGADO", todas las cuotas mensuales
+   pendientes del año exento cambian de forma automática a 'EXENTO'.
+2. Al autogenerarse la cuota mensual de cada mes, el sistema verifica
+   si existe una cuota "Anual" con estado "PAGADO" para el año corriente. 
+   De ser así, la mensualidad se crea directamente con estado 'EXENTO'.
+
+------------------------------------------------------------------------
+4. LOGICA DE PAGOS PARCIALES Y SALDOS
+------------------------------------------------------------------------
+El cobro de cuotas ya no es binario (pagado/no pagado). Soporta abonos
+parciales gracias a la centralización en la tabla "pagos_cuotas":
+
+* Monto Original: Definido al crear la cuota (ej. $500.00).
+* Historial de Abonos: Cada pago parcial se guarda en "pagos_cuotas" 
+  con su monto real, método de pago y fecha.
+* Saldo Pendiente:
+  Se calcula restando la suma de todos los abonos en "pagos_cuotas"
+  al monto original de la cuota.
+  Fórmula:
+  Saldo Pendiente = Monto Original - Suma(Abonos Registrados)
+  
+* Transición de Estados:
+  - Si el Saldo Pendiente llega a $0.00, el estado en "cuotas_asociados" 
+    se actualiza a 'PAGADO'.
+  - Si el Saldo Pendiente es mayor que $0.00, se mantiene como 'PENDIENTE'.
+
+* Integración con Ventanilla / Cuentas por Cobrar:
+  Para ser compatible con el módulo de cursos, cuando el frontend manda 
+  un abono, identifica que es una cuota usando un ID negativo:
+  ID Recibido = -(id_cuota)
+  El backend convierte este ID a positivo, busca la cuota en 
+  "cuotas_asociados" y asienta el abono en "pagos_cuotas".
+
+------------------------------------------------------------------------
+5. CONEXION DE DATOS (BASE DE DATOS)
+------------------------------------------------------------------------
+El sistema mapea las cuotas en dos tablas relacionadas en "sistema_colegio.db":
+
+A. TABLA: cuotas_asociados
+   * Almacena la deuda original.
+   * Columnas: id_cuota, id_cliente, tipo_cuota (Mensual/Anual), anio, 
+     mes, monto, estado_pago (PENDIENTE/PAGADO/EXENTO), fecha_pago.
+
+B. TABLA: pagos_cuotas
+   * Almacena el historial físico de cada abono recibido.
+   * Columnas: id_pago_cuota, id_cuota, id_cliente, monto_pagado, 
+     metodo_pago, fecha_pago, observacion.
+   * Relación: id_cuota apunta a cuotas_asociados(id_cuota).
+
+------------------------------------------------------------------------
+6. FLUJO DE CONEXIÓN ENTRE MÓDULOS DE LA INTERFAZ
+------------------------------------------------------------------------
+* PANEL DE CUOTAS DE ASOCIADOS:
+  - Carga el dashboard general (KPIs) desde "/api/cuotas/dashboard"
+    (Proyección del Mes = Suma de montos de cuotas mensuales de este mes, 
+    Recaudado = Suma de pagos_cuotas de este mes).
+  - Carga la tabla principal desde "/api/cuotas/asociados"
+    (Muestra la lista de asociados y calcula el Saldo pendiente real 
+    de cada uno consultando la base de datos).
+  - Al dar doble clic en un asociado, abre el calendario que lee las 
+    cuotas pendientes de "/api/cuotas/{id_cliente}/pendientes".
+
+* PUNTO DE VENTA (POS):
+  - Permite cobrar las cuotas pendientes del cliente seleccionado 
+    agregándolas al carrito.
+  - Al procesar la compra, realiza una petición POST a "/api/cuotas/pagar", 
+    la cual liquida la cuota en `cuotas_asociados` y ahora también registra 
+    físicamente el pago en `pagos_cuotas` con su monto restante real.
+
+* CUENTAS POR COBRAR (DETALLE DE DEUDA):
+  - Muestra una vista unificada de todo lo que debe el cliente 
+    (Cursos + Cuotas) consultando "/api/pagos/deudas/{id_cliente}".
+  - Las cuotas se muestran con su "monto_total", su suma de "abonado" 
+    y el "saldo_pendiente" real.
+  - Al dar clic en "Pagar Concepto" o "Abonar", envía la petición a 
+    "/api/pagos/abono" con el ID negativo.
+
+* HISTORIAL DE MOVIMIENTOS:
+  - Lee los abonos a cursos desde "pagos_transacciones" y los abonos 
+    a cuotas desde "pagos_cuotas" mediante "/api/pagos/movimientos/{id_cliente}", 
+    mezclando ambos en una sola línea del tiempo ordenada por fecha.
+
+========================================================================
+HISTORIAL DE MODIFICACIONES Y CONTROL DE CAMBIOS
+========================================================================
+- [Corrección - Registro de Clientes]: Modificado en `clientes.py` para 
+  convertir strings vacíos de RFC/CURP a valores `None` (NULL) en SQLite 
+  y prevenir colisiones de la restricción `UNIQUE`.
+- [Regla - Alta con Cargo Inicial]: Modificado en `clientes.py` para 
+  que al registrar un cliente de tipo 'asociado' y estatus 'Activo', 
+  se le asigne de forma inmediata la cuota mensual de $500.00 del mes 
+  en curso.
+- [Rediseño - Proyección del Mes en Dashboard]:
+  * Backend (`cuotas.py`): Se calcula la meta/proyección del mes sumando 
+    el monto de las cuotas de tipo 'Mensual' que pertenezcan al mes y 
+    año en curso (`SUM(monto)` de `cuotas_asociados`).
+  * Frontend (`CuotasView.tsx`): La tarjeta "Proyección del Mes" muestra 
+    ahora el total esperado (Proyección) como el valor principal en 
+    grande (ej. $3,500.00). La barra de progreso tiene como tope (100%) 
+    ese total, y se va llenando con el dinero recaudado de las cuotas 
+    mensuales en el mes. Se eliminó la etiqueta "Meta:" del progreso.
+- [Corrección - Registro de Liquidaciones POS en pagos_cuotas]:
+  * Backend (`cuotas.py`): Modificado el endpoint `/api/cuotas/pagar` 
+    para que al liquidar cuotas desde el Punto de Venta se inserte 
+    físicamente el pago correspondiente (con el remanente real) en la 
+    tabla `pagos_cuotas`. Esto asegura que los ingresos por POS entren 
+    en el progreso recaudado del mes y en la lista de movimientos.
+========================================================================

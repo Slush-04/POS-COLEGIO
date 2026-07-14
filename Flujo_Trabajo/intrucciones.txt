@@ -1,0 +1,36 @@
+ESPECIFICACIONES DE MÓDULO: CONTROL DE CUOTAS Y ASOCIADOS
+
+--- 1. MODIFICACIÓN PREVIA (MÓDULO CLIENTES) ---
+- Base de Datos/Backend: Agregar la columna `estatus_operativo` (Activo/Inactivo) a la tabla de clientes.
+- Frontend (ClientsView): En el formulario de "Nuevo Cliente", agregar un selector para "Estado del Socio" con valor por defecto "Activo".
+- Lógica: Las cuotas mensuales SOLO se generan automáticamente a los clientes que cumplan dos condiciones: tipo_cliente = 'Asociado' Y estatus_operativo = 'Activo'.
+
+--- 2. LÓGICA DE NEGOCIO (REGLAS DE FACTURACIÓN) ---
+- Cuota Mensual: Se carga como deuda al inicio de cada mes. Debe reflejarse en la tabla global de "Cuentas por Cobrar".
+- Cuota Anual: Si un socio paga el concepto "Cuota Anual", el sistema lo exime de pagos mensuales para ese año. No se generarán deudas mensuales y todo su calendario anual se marcará como pagado.
+
+--- 3. INTERFAZ: DASHBOARD DE KPIs (SUPERIOR) ---
+Implementar 4 tarjetas analíticas sobre la tabla principal:
+1. Estado de Membresía: Conteo total de Asociados (Activos vs Inactivos).
+2. Proyección del Mes: Barra de progreso. Meta = (Total Activos * Costo Cuota). Progreso = Pagos reales recibidos en el mes.
+3. Cuotas Pendientes: Suma total histórica de deudas por concepto de cuotas no pagadas durante el año.
+4. Anualidades Pagadas: Conteo/Suma de ingresos filtrados bajo el concepto "Anualidad".
+
+--- 4. INTERFAZ: TABLA PRINCIPAL DE ASOCIADOS ---
+- Paginación: 15 registros por página.
+- Búsqueda y Filtros: Barra de texto (A-Z/RFC) y filtros rápidos (Con Adeudo, Mayor/Menor Deuda, Activos/Inactivos).
+- Columnas:
+  * ID (Base de datos).
+  * Nombre Completo.
+  * RFC.
+  * Tipo/Estatus: Etiqueta visual (Azul si es 'Activo', Gris si es 'Inactivo').
+  * Historial (Últimos 4 meses): Renderizado visual de 4 círculos/rectángulos con la abreviatura del mes (ej. Ene, Feb). Verde = Pagado, Rojo = Con Adeudo.
+
+--- 5. INTERFAZ: MODAL DE CALENDARIO DETALLADO ---
+- Trigger: Evento `onDoubleClick` en cualquier fila de la tabla.
+- Propósito: Abrir un Modal (estilo Neumorfismo) que reciba por Props el nombre del cliente y muestre su historial completo del año.
+- Controles: Variables de estado para el "Año Actual" con botones (< y >) para navegar entre años.
+- Lógica de Colores (Renderizado Condicional de Meses):
+  * GRIS (Desactivado): Meses anteriores a la fecha de registro oficial del cliente en el sistema.
+  * ROJO: Meses donde se generó el cargo pero no hay pago registrado.
+  * VERDE: Meses pagados individualmente, o los 12 meses completos si existe un pago de "Anualidad" para ese año fiscal.

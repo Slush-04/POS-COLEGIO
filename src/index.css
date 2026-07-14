@@ -1,0 +1,58 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-corporativa), ui-sans-serif, system-ui, sans-serif;
+  --color-primary: var(--color-primario);
+  --color-primary-hover: var(--color-primario-hover);
+  --color-secondary: var(--color-secundario);
+  --color-bg-app: var(--color-fondo-app);
+  --color-bg-sidebar: var(--color-fondo-sidebar);
+  --color-border-table: var(--color-borde-tabla);
+  --color-bg-th: var(--color-fondo-header-tabla);
+  --color-text-main: var(--color-texto-principal);
+  --color-text-muted: var(--color-texto-secundario);
+  --radius-custom: var(--radio-bordes);
+}
+
+@layer base {
+  :root {
+    /* ==========================================================================
+       INICIO DE VARIABLES DE PERSONALIZACIÓN (WHITE-LABEL)
+       -> Requisito Crítico: Cambia estos valores para adaptar la marca.
+       ========================================================================== */
+    
+    /* 1. FUENTES TIPOGRÁFICAS
+       Cambia 'Inter' por el nombre de la fuente corporativa principal. */
+    --font-corporativa: 'Inter';
+
+    /* 2. COLORES CORPORATIVOS PRIMARIOS Y SECUNDARIOS
+       Define los colores base de tu marca (botones, fondos seleccionados, etc.) */
+    --color-primario: #3b82f6;         /* Color principal (ej. botones oscuros, iconos) */
+    --color-primario-hover: #2563eb;   /* Color principal al hacer hover */
+    --color-secundario: rgba(59, 130, 246, 0.1);       /* Color secundario (ej. fondo de items seleccionados) */
+    
+    /* Colores de fondo de la aplicación */
+    --color-fondo-app: #0a0a0a;        /* Fondo general de la aplicación */
+    --color-fondo-sidebar: #171717;    /* Fondo de la barra lateral izquierda */
+    
+    /* 3. BORDES Y ESTILOS DE LAS TABLAS DE DATOS
+       Ajusta el radio de los bordes y colores divisorios de las tablas y tarjetas. */
+    --radio-bordes: 0.5rem;            /* Redondeo de bordes (ej. 0.25rem, 0.5rem, 1rem) */
+    --color-borde-tabla: #262626;      /* Color de las líneas separadoras en tablas */
+    --color-fondo-header-tabla: rgba(0, 0, 0, 0.4); /* Fondo del encabezado de las tablas */
+
+    /* Colores de texto */
+    --color-texto-principal: #ffffff;
+    --color-texto-secundario: #a3a3a3;
+
+    /* ==========================================================================
+       FIN DE VARIABLES DE PERSONALIZACIÓN
+       ========================================================================== */
+  }
+
+  body {
+    background-color: var(--color-fondo-app);
+    color: var(--color-texto-principal);
+  }
+}

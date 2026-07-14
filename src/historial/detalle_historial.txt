@@ -1,0 +1,46 @@
+PANEL DE HISTORIAL DE VENTAS / TRANSACCIONES
+
+Este directorio contiene los componentes para consultar, filtrar y ver el detalle de los movimientos financieros (Ventas, Compras, Cuotas, Cursos).
+
+======================
+1. ESTRUCTURA DE ARCHIVOS
+======================
+- TransactionHistoryView.tsx: Es el panel principal de historial de transacciones. Reemplaza o se abre desde el Dashboard. Muestra una tabla con todas las transacciones, un campo de búsqueda y un filtro por tipo de movimiento.
+- TransactionDetailModal.tsx: Es un modal que se abre para mostrar los detalles completos de una sola transacción de forma aislada y estructurada.
+
+======================
+2. LÓGICA DE FUNCIONAMIENTO (Dashboard a Historial)
+======================
+- En el "DashboardView", al hacer clic en el botón "Ver Todo" (ubicado en el recuadro de Movimientos Recientes), se dispara el evento `onNavigate('transactions')`.
+- En "App.tsx", el estado `currentView` cambia a 'transactions'.
+- El componente `App` renderiza `<TransactionHistoryView />`.
+
+======================
+3. LÓGICA DEL HISTORIAL Y DETALLES (TransactionHistoryView)
+======================
+Filtros:
+- Búsqueda (Search): Permite buscar transacciones por nombre de Cliente, Serie/Folio o Tipo de transacción.
+- Filtro Select: (Opcionalmente conectable) Seleccionar el tipo de movimiento específico.
+
+Tabla de Resultados:
+- Muestra las columnas: Fecha, Serie/Folio, Cliente, Tipo, y Total/Saldo.
+- Los tipos (VENTA POS, CURSO, CUOTA, COMPRA) tienen colores de etiqueta dinámicos (badges) para identificarlos visualmente.
+- Los ingresos están marcados en color esmeralda, y los egresos (COMPRA) están en rojo.
+
+Apertura de Detalle (Doble Clic):
+- Cada fila (<tr>) de la tabla contiene el evento `onDoubleClick={() => setSelectedTransaction(trx)}`.
+- Al hacer doble clic en una fila, el estado `selectedTransaction` guarda el objeto de la transacción respectiva.
+- Como `selectedTransaction` ya no es nulo, el modal `<TransactionDetailModal />` pasa a tener `isOpen={true}` y se muestra en pantalla.
+
+======================
+4. LÓGICA DEL MODAL DE DETALLE (TransactionDetailModal)
+======================
+- Recibe la transacción a través de las "props".
+- Estructura y desglosa: 
+  * Total (resaltado grande en la parte superior)
+  * Fecha de pago
+  * Cliente (si viene vacío se asume "Público General")
+  * Concepto
+  * Método de pago
+  * Observaciones (si las tiene se muestran resaltadas, si no se muestra un aviso).
+- Botón Cerrar (y la X superior): Ambos ejecutan `onClose()`, lo que devuelve `selectedTransaction` a null en la vista padre, cerrando el modal animadamente.
