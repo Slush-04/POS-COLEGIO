@@ -1,8 +1,8 @@
-from database import get_db_connection
+from database import get_db_connection, generar_folio
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 import sqlite3
-from datetime import date
+from datetime import date, datetime
 
 router = APIRouter(
     prefix="/api/cursos",
@@ -59,6 +59,7 @@ def _actualizar_estatus_automaticos(cursor):
             FROM inscripciones i
             LEFT JOIN deudas d ON d.tipo_deuda = 'CURSO' AND d.id_referencia = i.id_inscripcion
             WHERE i.id_curso = ?
+              AND COALESCE(i.estado_inscripcion, 'ACTIVA') = 'ACTIVA'
         ''', (id_curso,))
         total_participantes, participantes_pagados = cursor.fetchone()
         nuevo_estatus = 'CERRADO' if total_participantes > 0 and total_participantes == participantes_pagados else 'PENDIENTE'
@@ -103,6 +104,7 @@ def obtener_cursos():
                 COALESCE(SUM(CASE WHEN i.tipo_tarifa = 'asociado' THEN 1 ELSE 0 END), 0) AS total_asociados
             FROM cursos c
             LEFT JOIN inscripciones i ON c.id_curso = i.id_curso
+                AND COALESCE(i.estado_inscripcion, 'ACTIVA') = 'ACTIVA'
             GROUP BY c.id_curso
             ORDER BY c.fecha_inicio DESC
         ''')
@@ -246,6 +248,7 @@ def obtener_participantes_curso(id_curso: int):
             LEFT JOIN clientes c ON i.id_cliente = c.id_cliente
             LEFT JOIN deudas d ON d.tipo_deuda = 'CURSO' AND d.id_referencia = i.id_inscripcion
             WHERE i.id_curso = ?
+              AND COALESCE(i.estado_inscripcion, 'ACTIVA') = 'ACTIVA'
         ''', (id_curso,))
 
         participantes = [dict(row) for row in cursor.fetchall()]
@@ -284,18 +287,29 @@ def inscribir_participante(id_curso: int, inscripcion: DatosInscripcion):
 
         curso_row = _obtener_curso_inscribible(cursor, id_curso)
         nombre_curso = curso_row[0]
+
+        # ── Crear operación ──
+        fecha_actual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        folio = generar_folio('CU', cursor)
+        cursor.execute('''
+            INSERT INTO operaciones (folio, tipo_operacion, id_cliente, total, estado, fecha_evento)
+            VALUES (?, 'CURSO', ?, ?, 'COMPLETADA', ?)
+        ''', (folio, id_cliente, inscripcion.monto_total, fecha_actual))
+        id_operacion = cursor.lastrowid
                 
         cursor.execute('''
             INSERT INTO inscripciones (
-                id_cliente, id_curso, nombre_participante, tipo_tarifa, monto_total, saldo_pendiente, estado_pago, facturado
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                id_cliente, id_curso, nombre_participante, tipo_tarifa, monto_total,
+                saldo_pendiente, estado_pago, facturado, id_operacion
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             id_cliente, id_curso, inscripcion.nombre, inscripcion.tipo_tarifa, inscripcion.monto_total,
-            inscripcion.saldo_pendiente, inscripcion.estado_pago, inscripcion.facturado
+            inscripcion.saldo_pendiente, inscripcion.estado_pago, inscripcion.facturado, id_operacion
         ))
         id_inscripcion = cursor.lastrowid
 
         # Auto-crear deuda si hay id_cliente (evitar duplicados)
+        id_deuda_det = None
         if id_cliente:
             cursor.execute(
                 "SELECT 1 FROM deudas WHERE tipo_deuda = 'CURSO' AND id_referencia = ?",
@@ -304,21 +318,34 @@ def inscribir_participante(id_curso: int, inscripcion: DatosInscripcion):
             if not cursor.fetchone():
                 estado_deuda = 'PAGADO' if inscripcion.saldo_pendiente == 0 and inscripcion.estado_pago == 'PAGADO' else 'PENDIENTE'
                 cursor.execute('''
-                    INSERT INTO deudas (id_cliente, tipo_deuda, id_referencia, concepto, monto_total, estado)
-                    VALUES (?, 'CURSO', ?, ?, ?, ?)
-                ''', (id_cliente, id_inscripcion, f"Curso: {nombre_curso}", inscripcion.monto_total, estado_deuda))
-                id_deuda = cursor.lastrowid
+                    INSERT INTO deudas (id_cliente, tipo_deuda, id_referencia, concepto, monto_total, estado, id_operacion)
+                    VALUES (?, 'CURSO', ?, ?, ?, ?, ?)
+                ''', (id_cliente, id_inscripcion, f"Curso: {nombre_curso}", inscripcion.monto_total, estado_deuda, id_operacion))
+                id_deuda_det = cursor.lastrowid
 
                 # Si ya viene pagada, registrar en pagos_deudas
                 if estado_deuda == 'PAGADO':
                     cursor.execute('''
-                        INSERT INTO pagos_deudas (id_deuda, id_cliente, monto_pagado, metodo_pago, fecha_pago, observacion)
-                        VALUES (?, ?, ?, 'No especificado', date('now'), 'Pago inicial de inscripción')
-                    ''', (id_deuda, id_cliente, inscripcion.monto_total))
+                        INSERT INTO pagos_deudas (id_deuda, id_cliente, monto_pagado, metodo_pago, fecha_pago, observacion,
+                                                  id_operacion, tipo_movimiento, fecha_evento, fecha_registro_mov, estado)
+                        VALUES (?, ?, ?, 'No especificado', date('now'), 'Pago inicial de inscripción',
+                                ?, 'PAGO', ?, ?, 'ACTIVO')
+                    ''', (id_deuda_det, id_cliente, inscripcion.monto_total,
+                          id_operacion, fecha_actual, fecha_actual))
+
+        # Detalle de operación
+        cursor.execute('''
+            INSERT INTO operacion_detalles
+            (id_operacion, tipo_detalle, id_referencia, descripcion, cantidad,
+             precio_unitario, descuento, iva, importe_total, id_deuda, id_inscripcion)
+            VALUES (?, 'CURSO', ?, ?, 1, ?, 0, 0, ?, ?, ?)
+        ''', (id_operacion, id_curso, nombre_curso, inscripcion.monto_total,
+              inscripcion.monto_total, id_deuda_det, id_inscripcion))
         
         conexion.commit()
         conexion.close()
-        return {"estatus": "éxito", "mensaje": "Participante inscrito correctamente."}
+        return {"estatus": "éxito", "mensaje": "Participante inscrito correctamente.",
+                "id_operacion": id_operacion, "folio": folio}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -333,6 +360,16 @@ def inscribir_participantes_bulk(id_curso: int, payload: BulkInscripciones):
 
         curso_row = _obtener_curso_inscribible(cursor, id_curso)
         nombre_curso = curso_row[0]
+
+        # ── Crear operación grupal ──
+        fecha_actual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        total_op = round(sum(i.monto_total for i in payload.inscripciones), 2)
+        folio = generar_folio('CU', cursor)
+        cursor.execute('''
+            INSERT INTO operaciones (folio, tipo_operacion, id_cliente, total, estado, fecha_evento)
+            VALUES (?, 'CURSO', ?, ?, 'COMPLETADA', ?)
+        ''', (folio, None, total_op, fecha_actual))
+        id_operacion = cursor.lastrowid
         
         registrados = 0
         for inscripcion in payload.inscripciones:
@@ -345,16 +382,18 @@ def inscribir_participantes_bulk(id_curso: int, payload: BulkInscripciones):
                     
             cursor.execute('''
                 INSERT INTO inscripciones (
-                    id_cliente, id_curso, nombre_participante, tipo_tarifa, monto_total, saldo_pendiente, estado_pago, facturado
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    id_cliente, id_curso, nombre_participante, tipo_tarifa, monto_total,
+                    saldo_pendiente, estado_pago, facturado, id_operacion
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 id_cliente, id_curso, inscripcion.nombre, inscripcion.tipo_tarifa, inscripcion.monto_total,
-                inscripcion.saldo_pendiente, inscripcion.estado_pago, inscripcion.facturado
+                inscripcion.saldo_pendiente, inscripcion.estado_pago, inscripcion.facturado, id_operacion
             ))
             id_inscripcion = cursor.lastrowid
             registrados += 1
 
             # Auto-crear deuda si hay id_cliente
+            id_deuda_det = None
             if id_cliente:
                 cursor.execute(
                     "SELECT 1 FROM deudas WHERE tipo_deuda = 'CURSO' AND id_referencia = ?",
@@ -363,18 +402,31 @@ def inscribir_participantes_bulk(id_curso: int, payload: BulkInscripciones):
                 if not cursor.fetchone():
                     estado_deuda = 'PAGADO' if inscripcion.saldo_pendiente == 0 and inscripcion.estado_pago == 'PAGADO' else 'PENDIENTE'
                     cursor.execute('''
-                        INSERT INTO deudas (id_cliente, tipo_deuda, id_referencia, concepto, monto_total, estado)
-                        VALUES (?, 'CURSO', ?, ?, ?, ?)
-                    ''', (id_cliente, id_inscripcion, f"Curso: {nombre_curso}", inscripcion.monto_total, estado_deuda))
-                    id_deuda = cursor.lastrowid
+                        INSERT INTO deudas (id_cliente, tipo_deuda, id_referencia, concepto, monto_total, estado, id_operacion)
+                        VALUES (?, 'CURSO', ?, ?, ?, ?, ?)
+                    ''', (id_cliente, id_inscripcion, f"Curso: {nombre_curso}", inscripcion.monto_total, estado_deuda, id_operacion))
+                    id_deuda_det = cursor.lastrowid
                     if estado_deuda == 'PAGADO':
                         cursor.execute('''
-                            INSERT INTO pagos_deudas (id_deuda, id_cliente, monto_pagado, metodo_pago, fecha_pago, observacion)
-                            VALUES (?, ?, ?, 'No especificado', date('now'), 'Pago inicial de inscripción')
-                        ''', (id_deuda, id_cliente, inscripcion.monto_total))
+                            INSERT INTO pagos_deudas (id_deuda, id_cliente, monto_pagado, metodo_pago, fecha_pago, observacion,
+                                                      id_operacion, tipo_movimiento, fecha_evento, fecha_registro_mov, estado)
+                            VALUES (?, ?, ?, 'No especificado', date('now'), 'Pago inicial de inscripción',
+                                    ?, 'PAGO', ?, ?, 'ACTIVO')
+                        ''', (id_deuda_det, id_cliente, inscripcion.monto_total,
+                              id_operacion, fecha_actual, fecha_actual))
+
+            # Detalle de operación
+            cursor.execute('''
+                INSERT INTO operacion_detalles
+                (id_operacion, tipo_detalle, id_referencia, descripcion, cantidad,
+                 precio_unitario, descuento, iva, importe_total, id_deuda, id_inscripcion)
+                VALUES (?, 'CURSO', ?, ?, 1, ?, 0, 0, ?, ?, ?)
+            ''', (id_operacion, id_curso, nombre_curso, inscripcion.monto_total,
+                  inscripcion.monto_total, id_deuda_det, id_inscripcion))
             
         conexion.commit()
         conexion.close()
-        return {"estatus": "éxito", "mensaje": f"{registrados} participantes inscritos correctamente."}
+        return {"estatus": "éxito", "mensaje": f"{registrados} participantes inscritos correctamente.",
+                "id_operacion": id_operacion, "folio": folio}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

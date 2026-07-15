@@ -1,0 +1,46 @@
+Crear la tabla operaciones
+Será la entidad principal del ticket o movimiento administrativo. Reemplaza la necesidad de inferir una venta desde varios pagos.
+Campos sugeridos:
+id_operacion
+folio
+tipo_operacion        -- VENTA, VENTA_CUENTA, CURSO, CUOTA, COMPRA
+id_cliente
+total
+estado                -- COMPLETADA, ANULADA
+fecha_evento          -- fecha/hora económica de la operación
+fecha_registro        -- cuándo se guardó
+fecha_anulacion       -- cuándo se anuló
+motivo_anulacion
+id_operacion_origen   -- opcional, para futuros reversos
+Cada operación tendrá un folio único. Una venta a cuenta también tendrá operación y aparecerá en el historial, aunque no exista pago.
+
+Crear la tabla operacion_detalles
+Guardará exactamente qué produjo la operación, evitando depender de descripciones de texto.
+id_detalle
+id_operacion
+tipo_detalle          -- INVENTARIO, CURSO, CUOTA
+id_referencia         -- id de producto, curso o cuota
+descripcion
+cantidad
+precio_unitario
+descuento
+iva
+importe_total
+id_deuda
+id_inscripcion
+Al anular, se leen estos detalles para saber con precisión qué stock volver, qué inscripción cancelar y qué cuota restaurar.
+
+Crear movimientos_inventario
+No se deberá modificar stock sin dejar un movimiento. Esta tabla registrará cada entrada o salida.
+id_movimiento
+id_operacion
+id_inventario
+tipo_movimiento       -- SALIDA_VENTA, ENTRADA_ANULACION, AJUSTE
+cantidad
+fecha_evento
+fecha_registro
+observacion
+Flujo:
+Venta de 2 libros: salida de 2 y reducción de stock.
+Anulación completa: entrada de 2 y aumento de stock.
+Si el producto ya está inactivo, el stock igual debe restituirse; no se debe perder la relación.

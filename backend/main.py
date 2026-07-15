@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import clientes, cursos, pagos, inventario, cuotas, pos
+from routers import clientes, cursos, pagos, inventario, cuotas, pos, operaciones, configuracion
 from database import inicializar_base_datos
 
 # Inicializamos el sistema administrativo
@@ -25,6 +25,8 @@ app.include_router(pagos.router)
 app.include_router(inventario.router)
 app.include_router(cuotas.router)
 app.include_router(pos.router)
+app.include_router(operaciones.router)
+app.include_router(configuracion.router)
 
 @app.on_event("startup")
 def generar_cuotas_inicio():

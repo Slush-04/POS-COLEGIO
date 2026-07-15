@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Filter, Download, ArrowUpRight, ArrowDownRight, Loader2 } from "lucide-react";
+import { Search, Download, ArrowUpRight, ArrowDownRight, Loader2 } from "lucide-react";
 import { TransactionDetailModal } from "./TransDetail_Modal";
 
 export function TransactionHistoryView() {
@@ -7,6 +7,7 @@ export function TransactionHistoryView() {
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [typeFilter, setTypeFilter] = useState("");
+    const [statusFilter, setStatusFilter] = useState("");
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [selectedTransaction, setSelectedTransaction] = useState<any | null>(null);
@@ -15,7 +16,7 @@ export function TransactionHistoryView() {
     // Reiniciar a la página 1 cuando cambian los filtros
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm, typeFilter, startDate, endDate]);
+    }, [searchTerm, typeFilter, statusFilter, startDate, endDate]);
 
     const fetchTransactions = async () => {
         try {
@@ -39,12 +40,18 @@ export function TransactionHistoryView() {
     const getTypeStyle = (type: string) => {
         switch (type) {
             case "VENTA": return "text-emerald-400 bg-emerald-400/10 border-emerald-400/20";
+            case "VENTA A CUENTA": return "text-amber-400 bg-amber-400/10 border-amber-400/20";
             case "CURSO": return "text-blue-400 bg-blue-400/10 border-blue-400/20";
             case "CUOTA": return "text-purple-400 bg-purple-400/10 border-purple-400/20";
             case "COMPRA": return "text-red-400 bg-red-400/10 border-red-400/20";
+            case "PAGO": return "text-cyan-400 bg-cyan-400/10 border-cyan-400/20";
             default: return "text-zinc-400 bg-zinc-400/10 border-zinc-400/20";
         }
     };
+
+    const getStatusStyle = (status: string) => status === "ANULADA"
+        ? "text-red-400 bg-red-500/10 border-red-500/20"
+        : "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
 
     const filteredTransactions = transactions.filter(t => {
         const clientName = t.client || "";
@@ -55,6 +62,7 @@ export function TransactionHistoryView() {
             folio.toLowerCase().includes(searchTerm.toLowerCase()) ||
             movementType.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesType = typeFilter ? t.type === typeFilter : true;
+        const matchesStatus = statusFilter ? t.status === statusFilter : true;
 
         let matchesDate = true;
         if (startDate) {
@@ -64,7 +72,7 @@ export function TransactionHistoryView() {
             matchesDate = matchesDate && t.date <= endDate;
         }
 
-        return matchesSearch && matchesType && matchesDate;
+        return matchesSearch && matchesType && matchesStatus && matchesDate;
     });
 
     const totalPages = Math.ceil(filteredTransactions.length / 15);
@@ -112,9 +120,24 @@ export function TransactionHistoryView() {
                         >
                             <option value="">Todos los Tipos</option>
                             <option value="VENTA">Venta</option>
+                            <option value="VENTA A CUENTA">Venta a cuenta</option>
                             <option value="CURSO">Curso</option>
                             <option value="CUOTA">Cuota</option>
+                            <option value="PAGO">Pago de deuda</option>
                             <option value="COMPRA">Compra</option>
+                        </select>
+                    </div>
+
+                    <div className="space-y-1.5 w-full md:w-44">
+                        <label className="text-xs font-medium text-zinc-400">Estado</label>
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            className="w-full px-3 py-2 bg-black/50 border border-white/10 rounded-lg text-sm text-zinc-300 focus:outline-none focus:border-blue-500 appearance-none"
+                        >
+                            <option value="">Todos</option>
+                            <option value="COMPLETADA">Completada</option>
+                            <option value="ANULADA">Anulada</option>
                         </select>
                     </div>
 
@@ -138,9 +161,9 @@ export function TransactionHistoryView() {
                         />
                     </div>
 
-                    {(startDate || endDate || typeFilter || searchTerm) && (
+                    {(startDate || endDate || typeFilter || statusFilter || searchTerm) && (
                         <button
-                            onClick={() => { setStartDate(""); setEndDate(""); setTypeFilter(""); setSearchTerm(""); }}
+                            onClick={() => { setStartDate(""); setEndDate(""); setTypeFilter(""); setStatusFilter(""); setSearchTerm(""); }}
                             className="px-4 py-2 text-sm font-medium text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 rounded-lg transition-colors h-[38px] flex items-center justify-center whitespace-nowrap"
                         >
                             Limpiar Filtros
@@ -159,13 +182,14 @@ export function TransactionHistoryView() {
                                 <th className="px-6 py-4 font-medium">Serie/Folio</th>
                                 <th className="px-6 py-4 font-medium">Cliente</th>
                                 <th className="px-6 py-4 font-medium">Tipo</th>
+                                <th className="px-6 py-4 font-medium">Estado</th>
                                 <th className="px-6 py-4 font-medium text-right">Total/Saldo</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border-table">
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-8 text-center text-zinc-500">
+                                    <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">
                                         <div className="flex items-center justify-center gap-2">
                                             <Loader2 className="w-5 h-5 animate-spin text-blue-400" />
                                             Cargando transacciones...
@@ -176,7 +200,7 @@ export function TransactionHistoryView() {
                                 paginatedTransactions.map((trx) => (
                                     <tr
                                         key={trx.id}
-                                        className="hover:bg-white/5 transition-colors cursor-pointer group"
+                                        className={`hover:bg-white/5 transition-colors cursor-pointer group ${trx.status === 'ANULADA' ? 'opacity-70' : ''}`}
                                         onDoubleClick={() => setSelectedTransaction(trx)}
                                     >
                                         <td className="px-6 py-4 whitespace-nowrap text-zinc-300">{trx.date}</td>
@@ -187,9 +211,14 @@ export function TransactionHistoryView() {
                                                 {trx.type}
                                             </span>
                                         </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${getStatusStyle(trx.status)}`}>
+                                                {trx.status}
+                                            </span>
+                                        </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right">
                                             <div className="flex items-center justify-end gap-2">
-                                                <span className="font-mono font-bold text-white">
+                                                <span className={`font-mono font-bold text-white ${trx.status === 'ANULADA' ? 'line-through text-zinc-500' : ''}`}>
                                                     ${trx.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                                 </span>
                                                 {trx.type === 'COMPRA' ? (
@@ -246,6 +275,10 @@ export function TransactionHistoryView() {
                 isOpen={!!selectedTransaction}
                 onClose={() => setSelectedTransaction(null)}
                 transaction={selectedTransaction}
+                onAnulled={async () => {
+                    setSelectedTransaction(null);
+                    await fetchTransactions();
+                }}
             />
         </div>
     );

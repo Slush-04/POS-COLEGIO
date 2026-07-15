@@ -1,4 +1,4 @@
-from database import get_db_connection
+from database import get_db_connection, generar_folio
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
@@ -177,6 +177,14 @@ def registrar_pago_cuota(pago: PagoCuotas):
     try:
         cursor = conexion.cursor()
         fecha_actual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # ── Crear operación ──
+        folio = generar_folio('QT', cursor)
+        cursor.execute('''
+            INSERT INTO operaciones (folio, tipo_operacion, id_cliente, total, estado, fecha_evento)
+            VALUES (?, 'CUOTA', ?, ?, 'COMPLETADA', ?)
+        ''', (folio, pago.id_cliente, pago.monto_total, fecha_actual))
+        id_operacion = cursor.lastrowid
         
         # Obtener las cuotas pendientes más antiguas, incluyendo el monto original
         cursor.execute('''
@@ -208,9 +216,9 @@ def registrar_pago_cuota(pago: PagoCuotas):
                 id_deuda = deuda_row[0]
             else:
                 cursor.execute('''
-                    INSERT INTO deudas (id_cliente, tipo_deuda, id_referencia, concepto, monto_total, estado, fecha_generacion)
-                    VALUES (?, ?, ?, ?, ?, 'PENDIENTE', ?)
-                ''', (pago.id_cliente, tipo_deuda, id_cuota, concepto, monto, f"{anio}-{(mes or 1):02d}-01"))
+                    INSERT INTO deudas (id_cliente, tipo_deuda, id_referencia, concepto, monto_total, estado, fecha_generacion, id_operacion)
+                    VALUES (?, ?, ?, ?, ?, 'PENDIENTE', ?, ?)
+                ''', (pago.id_cliente, tipo_deuda, id_cuota, concepto, monto, f"{anio}-{(mes or 1):02d}-01", id_operacion))
                 id_deuda = cursor.lastrowid
 
             cursor.execute("SELECT COALESCE(SUM(monto_pagado), 0) FROM pagos_deudas WHERE id_deuda = ?", (id_deuda,))
@@ -222,19 +230,29 @@ def registrar_pago_cuota(pago: PagoCuotas):
                 continue
 
             cursor.execute('''
-                INSERT INTO pagos_deudas (id_deuda, id_cliente, monto_pagado, metodo_pago, fecha_pago, observacion)
-                VALUES (?, ?, ?, 'Efectivo', ?, ?)
-            ''', (id_deuda, pago.id_cliente, restante, fecha_actual, f"Liquidación de {concepto}"))
-            cursor.execute("UPDATE deudas SET estado = 'PAGADO' WHERE id_deuda = ?", (id_deuda,))
+                INSERT INTO pagos_deudas (id_deuda, id_cliente, monto_pagado, metodo_pago, fecha_pago, observacion,
+                                          id_operacion, tipo_movimiento, fecha_evento, fecha_registro_mov, estado)
+                VALUES (?, ?, ?, 'Efectivo', ?, ?, ?, 'PAGO', ?, ?, 'ACTIVO')
+            ''', (id_deuda, pago.id_cliente, restante, fecha_actual, f"Liquidación de {concepto}",
+                  id_operacion, fecha_actual, fecha_actual))
+            cursor.execute("UPDATE deudas SET estado = 'PAGADO', id_operacion = ? WHERE id_deuda = ?", (id_operacion, id_deuda))
+
+            # Detalle de operación
+            cursor.execute('''
+                INSERT INTO operacion_detalles
+                (id_operacion, tipo_detalle, id_referencia, descripcion, cantidad,
+                 precio_unitario, descuento, iva, importe_total, id_deuda)
+                VALUES (?, 'CUOTA', ?, ?, 1, ?, 0, 0, ?, ?)
+            ''', (id_operacion, id_cuota, concepto, restante, restante, id_deuda))
 
         # Actualizar cuotas a PAGADO
         ids_a_pagar = [str(cuota[0]) for cuota in cuotas_a_pagar]
         placeholders = ','.join('?' * len(ids_a_pagar))
         cursor.execute(f'''
             UPDATE cuotas_asociados 
-            SET estado_pago = 'PAGADO', fecha_pago = ? 
+            SET estado_pago = 'PAGADO', fecha_pago = ?, id_operacion = ?
             WHERE id_cuota IN ({placeholders})
-        ''', [fecha_actual] + ids_a_pagar)
+        ''', [fecha_actual, id_operacion] + ids_a_pagar)
         
         # Lógica especial de EXENCIÓN para Cuota Anual
         if pago.tipo_cuota == 'Anual':
@@ -280,7 +298,9 @@ def registrar_pago_cuota(pago: PagoCuotas):
         return {
             "estatus": "éxito", 
             "mensaje": f"Se registraron {len(cuotas_a_pagar)} cuotas como pagadas.",
-            "cuotas_pagadas": ids_a_pagar
+            "cuotas_pagadas": ids_a_pagar,
+            "id_operacion": id_operacion,
+            "folio": folio
         }
     except Exception as e:
         conexion.rollback()
@@ -352,7 +372,7 @@ def obtener_dashboard_cuotas():
             FROM pagos_deudas pd
             JOIN deudas d ON pd.id_deuda = d.id_deuda
             WHERE d.tipo_deuda = 'CUOTA_MENSUAL'
-              AND strftime('%Y-%m', pd.fecha_pago) = ?
+              AND strftime('%Y-%m', COALESCE(pd.fecha_evento, pd.fecha_pago)) = ?
         ''', (mes_str,))
         progreso_mes = cursor.fetchone()[0] or 0.0
         

@@ -276,8 +276,11 @@ export function CuotasView() {
                     onDoubleClick={() => handleOpenCalendar(asociado)}
                   >
                     <td className="px-6 py-4 text-zinc-400 font-mono text-xs">#{asociado.id_cliente}</td>
-                    <td className="px-6 py-4 text-white font-medium">
-                      <div className="flex items-center gap-1.5">
+                    <td className="px-6 py-4">
+                      <div className={cn(
+                        "flex items-center gap-1.5 font-medium",
+                        asociado.estatus_operativo === 'Activo' ? "text-zinc-300" : "text-zinc-500"
+                      )}>
                         <span>{asociado.nombre}</span>
                         {asociado.anualidad === 'PAGADO' && (
                           <Crown className="w-3.5 h-3.5 text-amber-400 shrink-0" />
@@ -286,13 +289,16 @@ export function CuotasView() {
                     </td>
                     <td className="px-6 py-4 text-zinc-500 font-mono text-xs">{asociado.rfc || '---'}</td>
                     <td className="px-6 py-4">
-                      <span className={cn(
-                        "inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border",
-                        asociado.estatus_operativo === 'Activo'
-                          ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
-                          : "bg-zinc-800 text-zinc-400 border-zinc-700"
-                      )}>
-                        {asociado.estatus_operativo}
+                      <span className="inline-flex items-center gap-1.5 text-xs font-medium">
+                        <span className={cn(
+                          "w-2 h-2 rounded-full shrink-0",
+                          asociado.estatus_operativo === 'Activo' ? "bg-emerald-400" : "bg-zinc-500"
+                        )} />
+                        <span className={cn(
+                          asociado.estatus_operativo === 'Activo' ? "text-zinc-300" : "text-zinc-500"
+                        )}>
+                          {asociado.estatus_operativo}
+                        </span>
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -303,8 +309,8 @@ export function CuotasView() {
                             className={cn(
                               "px-2 py-0.5 rounded text-[10px] font-bold border flex-1 text-center transition-colors",
                               month.paid
-                                ? "bg-green-500/10 border-green-500/20 text-green-400"
-                                : "bg-red-500/10 border-red-500/20 text-red-400"
+                                ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-400"
+                                : "bg-red-950/40 border-red-500/20 text-rose-400"
                             )}
                           >
                             {month.name}
@@ -313,22 +319,30 @@ export function CuotasView() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <span className="font-mono font-bold text-white">
+                      <span className={cn(
+                        "font-mono font-bold",
+                        calcSaldoNum(asociado) > 0 ? "text-zinc-300" : "text-zinc-500"
+                      )}>
                         {saldo}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          handleOpenCuotasPayment(asociado);
-                        }}
-                        disabled={calcSaldoNum(asociado) <= 0}
-                        className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 px-3 py-1.5 rounded text-xs font-semibold transition-colors whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-500/10"
-                      >
-                        {calcSaldoNum(asociado) > 0 ? "Pagar cuotas" : "Sin adeudo"}
-                      </button>
+                      {calcSaldoNum(asociado) > 0 ? (
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleOpenCuotasPayment(asociado);
+                          }}
+                          className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/25 px-3 py-1.5 rounded text-xs font-semibold transition-colors whitespace-nowrap"
+                        >
+                          Pagar cuotas
+                        </button>
+                      ) : (
+                        <span className="text-xs font-semibold text-zinc-500 whitespace-nowrap">
+                          Sin adeudo
+                        </span>
+                      )}
                     </td>
                   </tr>
                 );

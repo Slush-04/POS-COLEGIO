@@ -172,7 +172,7 @@ def _obtener_deuda_para_movimiento(cursor, id_deuda: int):
     return deuda
 
 
-def _registrar_abono_deuda(cursor, id_deuda: int, monto_abono: float, metodo_pago: str, observacion: str, fecha_pago: Optional[date] = None):
+def _registrar_abono_deuda(cursor, id_deuda: int, monto_abono: float, metodo_pago: str, observacion: str, fecha_pago: Optional[date] = None, id_operacion: int = None):
     deuda = _obtener_deuda_para_movimiento(cursor, id_deuda)
 
     id_deuda, id_cliente, monto_total, estado_actual, tipo_deuda, id_referencia = deuda
@@ -195,11 +195,16 @@ def _registrar_abono_deuda(cursor, id_deuda: int, monto_abono: float, metodo_pag
     nuevo_saldo = round(saldo_actual - monto_abono, 2)
     nuevo_estado = 'PAGADO' if nuevo_saldo == 0 else 'PENDIENTE'
 
+    fecha_registro_mov = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     cursor.execute(
-        "INSERT INTO pagos_deudas (id_deuda, id_cliente, monto_pagado, metodo_pago, fecha_pago, observacion) VALUES (?, ?, ?, ?, ?, ?)",
-        (id_deuda, id_cliente, monto_abono, metodo_pago, fecha_pago, observacion)
+        """INSERT INTO pagos_deudas
+           (id_deuda, id_cliente, monto_pagado, metodo_pago, fecha_pago, observacion,
+            id_operacion, tipo_movimiento, fecha_evento, fecha_registro_mov, estado)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 'PAGO', ?, ?, 'ACTIVO')""",
+        (id_deuda, id_cliente, monto_abono, metodo_pago, fecha_pago, observacion,
+         id_operacion, fecha_pago, fecha_registro_mov)
     )
-    cursor.execute("UPDATE deudas SET estado = ? WHERE id_deuda = ?", (nuevo_estado, id_deuda))
+    cursor.execute("UPDATE deudas SET estado = ?, id_operacion = COALESCE(?, id_operacion) WHERE id_deuda = ?", (nuevo_estado, id_operacion, id_deuda))
 
     _sincronizar_origen_deuda(cursor, deuda, nuevo_saldo, nuevo_estado, fecha_pago)
 
@@ -245,14 +250,43 @@ def registrar_abono_deuda(abono: DatosAbonoDeuda):
     conexion = get_db_connection()
     try:
         cursor = conexion.cursor()
+        
+        # Obtener información de la deuda para recuperar id_cliente
+        deuda = _obtener_deuda_para_movimiento(cursor, abono.id_deuda)
+        id_deuda, id_cliente, monto_total, estado_actual, tipo_deuda, id_referencia = deuda
+
+        fecha_actual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        fecha_pago_dt = date.today()
+
+        # ── Crear operación ──
+        folio = generar_folio('PD', cursor)
+        cursor.execute('''
+            INSERT INTO operaciones (folio, tipo_operacion, id_cliente, total, estado, fecha_evento)
+            VALUES (?, 'PAGO_DEUDA', ?, ?, 'COMPLETADA', ?)
+        ''', (folio, id_cliente, abono.monto_abono, fecha_actual))
+        id_operacion = cursor.lastrowid
+
         resultado = _registrar_abono_deuda(
             cursor,
             abono.id_deuda,
             abono.monto_abono,
             abono.metodo_pago,
-            abono.observacion
+            abono.observacion,
+            fecha_pago=fecha_pago_dt,
+            id_operacion=id_operacion
         )
+
+        # Detalle de operación
+        cursor.execute('''
+            INSERT INTO operacion_detalles
+            (id_operacion, tipo_detalle, id_referencia, descripcion, cantidad,
+             precio_unitario, descuento, iva, importe_total, id_deuda)
+            VALUES (?, 'DEUDA', ?, ?, 1, ?, 0, 0, ?, ?)
+        ''', (id_operacion, abono.id_deuda, f"Abono a deuda #{abono.id_deuda}", abono.monto_abono, abono.monto_abono, abono.id_deuda))
+
         conexion.commit()
+        resultado["id_operacion"] = id_operacion
+        resultado["folio"] = folio
         return resultado
     except HTTPException:
         conexion.rollback()
@@ -333,6 +367,18 @@ def registrar_abonos_lote(abono: DatosAbonosLote):
                 detail=f"El pago y la condonación exceden el saldo total pendiente (${saldo_total:.2f})."
             )
 
+        # ── Crear operación (si hay abono real) ──
+        id_operacion = None
+        folio = None
+        if abono.monto_total > 0:
+            fecha_actual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            folio = generar_folio('PD', cursor)
+            cursor.execute('''
+                INSERT INTO operaciones (folio, tipo_operacion, id_cliente, total, estado, fecha_evento)
+                VALUES (?, 'PAGO_DEUDA', ?, ?, 'COMPLETADA', ?)
+            ''', (folio, id_cliente_real, abono.monto_total, fecha_actual))
+            id_operacion = cursor.lastrowid
+
         condonaciones_aplicadas = []
         for id_deuda, saldo in saldos:
             if monto_perdonado_restante <= 0:
@@ -366,7 +412,17 @@ def registrar_abonos_lote(abono: DatosAbonosLote):
                     pago.metodo_pago,
                     abono.observacion,
                     abono.fecha_pago,
+                    id_operacion=id_operacion,
                 )
+
+                if id_operacion:
+                    cursor.execute('''
+                        INSERT INTO operacion_detalles
+                        (id_operacion, tipo_detalle, id_referencia, descripcion, cantidad,
+                         precio_unitario, descuento, iva, importe_total, id_deuda)
+                        VALUES (?, 'DEUDA', ?, ?, 1, ?, 0, 0, ?, ?)
+                    ''', (id_operacion, id_deuda, f"Abono en lote a deuda #{id_deuda}", monto_aplicar, monto_aplicar, id_deuda))
+
                 pagos_aplicados.append({
                     "id_deuda": id_deuda,
                     "metodo_pago": pago.metodo_pago,
@@ -383,13 +439,17 @@ def registrar_abonos_lote(abono: DatosAbonosLote):
                         saldo_deuda_actual = saldos[indice_deuda][1]
 
         conexion.commit()
-        return {
+        ret = {
             "estatus": "exito",
             "mensaje": "Abono múltiple registrado correctamente.",
             "pagos_aplicados": pagos_aplicados,
             "condonaciones_aplicadas": condonaciones_aplicadas,
             "monto_no_usado": monto_restante,
         }
+        if id_operacion:
+            ret["id_operacion"] = id_operacion
+            ret["folio"] = folio
+        return ret
     except HTTPException:
         conexion.rollback()
         raise
@@ -426,16 +486,16 @@ def obtener_dashboard_financiero():
         cursor.execute('''
             SELECT COALESCE(SUM(monto_pagado), 0)
             FROM pagos_deudas
-            WHERE date(fecha_pago) >= date(?)
-              AND date(fecha_pago) < date(?, '+1 month')
+            WHERE date(COALESCE(fecha_evento, fecha_pago)) >= date(?)
+              AND date(COALESCE(fecha_evento, fecha_pago)) < date(?, '+1 month')
         ''', (inicio_mes.isoformat(), inicio_mes.isoformat()))
         ingresos_mes = float(cursor.fetchone()[0] or 0)
 
         cursor.execute('''
             SELECT COALESCE(SUM(monto_pagado), 0)
             FROM pagos_deudas
-            WHERE date(fecha_pago) >= date(?)
-              AND date(fecha_pago) < date(?)
+            WHERE date(COALESCE(fecha_evento, fecha_pago)) >= date(?)
+              AND date(COALESCE(fecha_evento, fecha_pago)) < date(?)
         ''', (inicio_mes_anterior.isoformat(), inicio_mes.isoformat()))
         ingresos_mes_anterior = float(cursor.fetchone()[0] or 0)
 
@@ -455,6 +515,7 @@ def obtener_dashboard_financiero():
             SELECT COUNT(DISTINCT c.id_curso), COUNT(i.id_inscripcion)
             FROM cursos c
             LEFT JOIN inscripciones i ON i.id_curso = c.id_curso
+                AND COALESCE(i.estado_inscripcion, 'ACTIVA') = 'ACTIVA'
             WHERE UPPER(COALESCE(c.estatus, 'ACTIVO')) = 'ACTIVO'
               AND strftime('%Y-%m', c.fecha_inicio) = ?
         ''', (periodo_actual,))
@@ -474,7 +535,7 @@ def obtener_dashboard_financiero():
             cursor.execute('''
                 SELECT COALESCE(SUM(monto_pagado), 0)
                 FROM pagos_deudas
-                WHERE strftime('%Y-%m', fecha_pago) = strftime('%Y-%m', ?)
+                WHERE strftime('%Y-%m', COALESCE(fecha_evento, fecha_pago)) = strftime('%Y-%m', ?)
             ''', (mes_inicio,))
             ingresos = float(cursor.fetchone()[0] or 0)
             cursor.execute('''
@@ -664,7 +725,7 @@ def obtener_movimientos_cliente(id_cliente: int):
 # ==========================================
 @router.get("/historial")
 def obtener_historial_transacciones():
-    """Devuelve todas las transacciones financieras (ingresos y egresos futuros) registradas en el sistema."""
+    """Devuelve una fila por operación y conserva pagos legacy sin operación."""
     try:
         conexion = get_db_connection()
         conexion.row_factory = sqlite3.Row
@@ -672,8 +733,102 @@ def obtener_historial_transacciones():
 
         cursor.execute('''
             SELECT
+                o.id_operacion,
+                o.folio,
+                o.tipo_operacion,
+                o.total,
+                o.estado,
+                o.fecha_evento,
+                o.fecha_registro,
+                o.fecha_anulacion,
+                o.motivo_anulacion,
+                cl.nombre AS nombre_cliente,
+                (
+                    SELECT GROUP_CONCAT(DISTINCT od.descripcion)
+                    FROM operacion_detalles od
+                    WHERE od.id_operacion = o.id_operacion
+                ) AS conceptos,
+                (
+                    SELECT GROUP_CONCAT(DISTINCT pd.metodo_pago)
+                    FROM pagos_deudas pd
+                    WHERE pd.id_operacion = o.id_operacion
+                      AND COALESCE(pd.tipo_movimiento, 'PAGO') = 'PAGO'
+                ) AS metodos_pago,
+                (
+                    SELECT GROUP_CONCAT(DISTINCT pd.observacion)
+                    FROM pagos_deudas pd
+                    WHERE pd.id_operacion = o.id_operacion
+                      AND COALESCE(pd.tipo_movimiento, 'PAGO') = 'PAGO'
+                      AND COALESCE(pd.observacion, '') <> ''
+                ) AS observaciones,
+                (
+                    SELECT GROUP_CONCAT(DISTINCT d.tipo_deuda)
+                    FROM operacion_detalles od
+                    JOIN deudas d ON d.id_deuda = od.id_deuda
+                    WHERE od.id_operacion = o.id_operacion
+                ) AS tipos_deuda
+            FROM operaciones o
+            LEFT JOIN clientes cl ON cl.id_cliente = o.id_cliente
+            ORDER BY datetime(o.fecha_evento) DESC,
+                     datetime(o.fecha_registro) DESC,
+                     o.id_operacion DESC
+        ''')
+        operaciones = cursor.fetchall()
+
+        transacciones = []
+        for operacion in operaciones:
+            tipo_operacion = operacion["tipo_operacion"]
+            tipos_deuda = {
+                tipo for tipo in (operacion["tipos_deuda"] or "").split(",") if tipo
+            }
+            if tipo_operacion == "VENTA_CUENTA":
+                tipo_front = "VENTA A CUENTA"
+            elif tipo_operacion == "VENTA":
+                tipo_front = "VENTA"
+            elif tipo_operacion == "CURSO":
+                tipo_front = "CURSO"
+            elif tipo_operacion == "CUOTA":
+                tipo_front = "CUOTA"
+            elif tipo_operacion == "COMPRA":
+                tipo_front = "COMPRA"
+            elif tipo_operacion == "PAGO_DEUDA" and tipos_deuda and tipos_deuda <= {"CURSO"}:
+                tipo_front = "CURSO"
+            elif tipo_operacion == "PAGO_DEUDA" and tipos_deuda and tipos_deuda <= {"CUOTA_MENSUAL", "CUOTA_ANUAL"}:
+                tipo_front = "CUOTA"
+            else:
+                tipo_front = "PAGO"
+
+            transacciones.append({
+                "id": f"OP-{operacion['id_operacion']}",
+                "idOperacion": operacion["id_operacion"],
+                "isLegacy": False,
+                "date": operacion["fecha_evento"],
+                "registeredAt": operacion["fecha_registro"],
+                "cancelledAt": operacion["fecha_anulacion"],
+                "serieFolio": operacion["folio"],
+                "client": operacion["nombre_cliente"] or "Público General",
+                "type": tipo_front,
+                "operationType": tipo_operacion,
+                "concept": operacion["conceptos"] or tipo_operacion.replace("_", " ").title(),
+                "amount": operacion["total"],
+                "paymentMethod": (
+                    "Cuenta por cobrar"
+                    if tipo_operacion == "VENTA_CUENTA"
+                    else (operacion["metodos_pago"] or "Sin pago").replace(",", ", ").title()
+                ),
+                "observation": operacion["observaciones"] or "",
+                "status": operacion["estado"],
+                "cancellationReason": operacion["motivo_anulacion"] or "",
+            })
+
+        # Los movimientos anteriores al paso 8 no tienen id_operacion. Se
+        # conservan visibles, pero no son anulables automáticamente porque no
+        # existe un ticket que agrupe sus efectos.
+        cursor.execute('''
+            SELECT
                 pd.id_pago_deuda,
-                pd.fecha_pago,
+                COALESCE(pd.fecha_evento, pd.fecha_pago) AS fecha_evento,
+                pd.fecha_registro_mov,
                 d.tipo_deuda,
                 cl.nombre AS nombre_cliente,
                 d.concepto,
@@ -683,42 +838,46 @@ def obtener_historial_transacciones():
             FROM pagos_deudas pd
             JOIN deudas d ON pd.id_deuda = d.id_deuda
             JOIN clientes cl ON pd.id_cliente = cl.id_cliente
-            ORDER BY pd.id_pago_deuda DESC
+            WHERE pd.id_operacion IS NULL
+              AND COALESCE(pd.tipo_movimiento, 'PAGO') = 'PAGO'
+            ORDER BY datetime(COALESCE(pd.fecha_evento, pd.fecha_pago)) DESC,
+                     pd.id_pago_deuda DESC
         ''')
-        rows = cursor.fetchall()
-        conexion.close()
-
-        transacciones = []
-        for r in rows:
-            tipo_db = r["tipo_deuda"]
-            id_pago = r["id_pago_deuda"]
-            
-            # Mapear tipo_deuda a los tipos esperados por el frontend
+        for pago in cursor.fetchall():
+            tipo_db = pago["tipo_deuda"]
+            id_pago = pago["id_pago_deuda"]
             if tipo_db == "CURSO":
-                tipo_front = "CURSO"
-                folio = f"C-{1000 + id_pago}"
+                tipo_front, folio = "CURSO", f"C-{1000 + id_pago}"
             elif tipo_db in ("CUOTA_MENSUAL", "CUOTA_ANUAL"):
-                tipo_front = "CUOTA"
-                folio = f"Q-{1000 + id_pago}"
+                tipo_front, folio = "CUOTA", f"Q-{1000 + id_pago}"
             elif tipo_db == "COMPRA":
-                tipo_front = "COMPRA"
-                folio = f"E-{1000 + id_pago}"
+                tipo_front, folio = "COMPRA", f"E-{1000 + id_pago}"
             else:
-                tipo_front = "VENTA"
-                folio = f"F-{1000 + id_pago}"
-
+                tipo_front, folio = "VENTA", f"F-{1000 + id_pago}"
             transacciones.append({
-                "id": f"TRX-{str(id_pago).zfill(3)}",
-                "date": r["fecha_pago"],
+                "id": f"LEGACY-{id_pago}",
+                "idOperacion": None,
+                "isLegacy": True,
+                "date": pago["fecha_evento"],
+                "registeredAt": pago["fecha_registro_mov"],
+                "cancelledAt": None,
                 "serieFolio": folio,
-                "client": r["nombre_cliente"] or "Público General",
+                "client": pago["nombre_cliente"] or "Público General",
                 "type": tipo_front,
-                "concept": r["concepto"],
-                "amount": r["monto_pagado"],
-                "paymentMethod": r["metodo_pago"].capitalize() if r["metodo_pago"] else "",
-                "observation": r["observacion"] or "",
-                "status": "COMPLETADO"
+                "operationType": "LEGACY",
+                "concept": pago["concepto"],
+                "amount": pago["monto_pagado"],
+                "paymentMethod": (pago["metodo_pago"] or "").title(),
+                "observation": pago["observacion"] or "",
+                "status": "COMPLETADA",
+                "cancellationReason": "",
             })
+
+        conexion.close()
+        transacciones.sort(
+            key=lambda item: (item["date"] or "", item["registeredAt"] or "", item["id"]),
+            reverse=True,
+        )
 
         return transacciones
     except Exception as e:

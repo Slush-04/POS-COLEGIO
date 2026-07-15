@@ -44,3 +44,12 @@ Apertura de Detalle (Doble Clic):
   * Método de pago
   * Observaciones (si las tiene se muestran resaltadas, si no se muestra un aviso).
 - Botón Cerrar (y la X superior): Ambos ejecutan `onClose()`, lo que devuelve `selectedTransaction` a null en la vista padre, cerrando el modal animadamente.
+- Botón Descargar ticket PDF: genera localmente un comprobante PDF con el folio, cliente, conceptos, pagos, total y estado de la operación. La descarga se inicia desde el mismo modal.
+
+======================
+5. BASE DE TICKETS Y RECIBOS
+======================
+- `ticketPdf.ts` concentra la generación y descarga del comprobante para evitar acoplarla al diseño del modal.
+- `TicketPdfOptions` define el punto de integración para los futuros parámetros de Configuración > Operación y Folios > Tickets y recibos.
+- Por ahora se usan valores institucionales predeterminados. Los parámetros de identidad, contenido, tamaño y pie se definirán en una etapa posterior.
+- Los tickets de operaciones anuladas conservan el importe original, muestran su estado y agregan el motivo de anulación.

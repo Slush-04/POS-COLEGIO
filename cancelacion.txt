@@ -1,0 +1,257 @@
+CANCELACIÓN COMPLETA DE TRANSACCIONES
+Documento de contexto funcional y técnico
+
+OBJETIVO
+========
+Implementar la anulación completa de transacciones sin borrar información.
+
+Una transacción anulada debe conservarse para auditoría, junto con sus
+movimientos inversos y el motivo de la anulación. El resultado funcional debe
+ser equivalente a que la operación original nunca hubiera afectado ingresos,
+cuentas por cobrar, inventario, cupos de cursos o cuotas, pero debe ser
+posible consultar que se registró y anuló.
+
+ALCANCE DE LA PRIMERA VERSIÓN
+=============================
+- Sólo se permite anulación COMPLETA de una operación.
+- No se implementan devoluciones parciales por ahora.
+- La acción estará disponible para todos los tipos de operación que aparezcan
+  en el historial: venta POS, venta a cuenta, curso, cuota y futuros tipos.
+- El motivo de anulación es obligatorio.
+- No se implementa por ahora autenticación ni registro de usuario responsable.
+- No se integra una pasarela bancaria; la reversa es administrativa. Si una
+  operación tuvo pagos por distintos métodos, todos deben revertirse como parte
+  de la misma anulación.
+
+REGLA PRINCIPAL: NUNCA ELIMINAR
+===============================
+No se deben borrar pagos, deudas, inscripciones, movimientos de inventario ni
+operaciones. En su lugar:
+
+1. La operación original cambia de estado COMPLETADA a ANULADA.
+2. Se registran movimientos de reversa ligados a los movimientos originales.
+3. Se guarda fecha de anulación y motivo.
+4. Los reportes excluyen o compensan los efectos de la operación anulada.
+
+Ejemplo de pago:
+
+  Pago original:  +$500, método efectivo, estado ANULADO
+  Reverso:        -$500, método efectivo, ligado al pago original
+
+La suma financiera es cero, pero ambos registros continúan disponibles para
+consulta y auditoría.
+
+FECHAS Y REPORTES
+=================
+Cada entidad relevante debe conservar dos fechas:
+
+- fecha_evento: fecha y hora económica de la venta, cobro o movimiento.
+- fecha_registro: fecha y hora en la que el sistema guardó el registro.
+
+Además, una operación anulada necesita fecha_anulacion.
+
+Regla de reportes acordada:
+
+Si un ingreso se registró en febrero y se anula en abril, su reversa deberá
+afectar el periodo de febrero. El reporte de febrero mostrará el ingreso y su
+reversa, con resultado neto correcto. Abril conserva la fecha de anulación sólo
+para fines de auditoría y consulta.
+
+Por ello, los dashboards e informes operativos deben calcularse con
+fecha_evento y considerar los reversos. fecha_registro y fecha_anulacion sirven
+para rastrear cuándo se realizó la modificación administrativa.
+
+MODELO RECOMENDADO
+==================
+No se necesita una nueva base de datos. Se mantiene la base SQLite actual y se
+agregan tablas y columnas para modelar una operación completa de forma
+explícita.
+
+TABLAS NUEVAS
+-------------
+
+1. operaciones
+   Encabezado único de cada movimiento administrativo o ticket.
+
+   Campos mínimos sugeridos:
+   - id_operacion
+   - folio (único)
+   - tipo_operacion: VENTA, VENTA_CUENTA, CURSO, CUOTA, COMPRA
+   - id_cliente (opcional)
+   - total
+   - estado: COMPLETADA, ANULADA
+   - fecha_evento
+   - fecha_registro
+   - fecha_anulacion (opcional)
+   - motivo_anulacion (opcional hasta anular)
+
+2. operacion_detalles
+   Detalle de lo que produjo la operación. Es indispensable para saber qué
+   efectos debe revertir una anulación.
+
+   Campos mínimos sugeridos:
+   - id_detalle
+   - id_operacion
+   - tipo_detalle: INVENTARIO, CURSO, CUOTA
+   - id_referencia
+   - descripcion
+   - cantidad
+   - precio_unitario
+   - descuento
+   - iva
+   - importe_total
+   - id_deuda (opcional)
+   - id_inscripcion (opcional)
+
+3. movimientos_inventario
+   Bitácora de toda variación de existencias. El stock no debe modificarse sin
+   insertar un movimiento vinculado a la operación que lo causó.
+
+   Campos mínimos sugeridos:
+   - id_movimiento
+   - id_operacion
+   - id_inventario
+   - tipo_movimiento: SALIDA_VENTA, ENTRADA_ANULACION, AJUSTE
+   - cantidad
+   - fecha_evento
+   - fecha_registro
+   - observacion
+
+TABLAS EXISTENTES A AMPLIAR
+---------------------------
+
+pagos_deudas:
+- id_operacion
+- tipo_movimiento: PAGO, REVERSO
+- id_pago_origen: referencia al pago que se revierte
+- fecha_evento
+- fecha_registro
+- estado: ACTIVO, ANULADO
+
+deudas:
+- id_operacion
+- estado debe admitir ANULADA
+- fecha_anulacion
+- motivo_anulacion
+
+inscripciones:
+- id_operacion
+- estado_inscripcion: ACTIVA, CANCELADA
+- fecha_cancelacion
+- motivo_cancelacion
+
+REGLAS POR TIPO DE OPERACIÓN
+============================
+
+VENTA POS CON INVENTARIO
+------------------------
+Al cobrar, se registra la salida de inventario y se disminuye stock_actual.
+Al anular completamente, se registra ENTRADA_ANULACION con la misma cantidad y
+se incrementa stock_actual. Esto debe ser automático; nunca un ajuste manual.
+
+VENTA A CUENTA
+--------------
+Aunque no exista pago inmediato, debe crear una operación y aparecer en el
+historial de ventas para fines administrativos. También crea una deuda pendiente.
+Al anular, la operación y su deuda quedan ANULADAS, y deja de aparecer como
+cuenta por cobrar activa.
+
+PAGOS MIXTOS
+------------
+Todos los pagos de una misma venta (por ejemplo, efectivo y tarjeta) comparten
+id_operacion. La anulación completa genera el reverso de cada pago original y
+los vincula mediante id_pago_origen. No se anula sólo un método de pago en la
+primera versión.
+
+CURSOS
+------
+Al anular una operación de curso:
+- la inscripción se marca CANCELADA, no se elimina;
+- deja de contarse para la capacidad/cupo del curso;
+- se revierten pagos y deuda relacionados;
+- consultas de cupo y participantes deben excluir inscripciones CANCELADA por
+  defecto.
+
+CUOTAS
+------
+- Anulación de cuota mensual: la cuota vuelve a PENDIENTE y sus pagos se
+  revierten.
+- Anulación de anualidad: la anualidad vuelve a PENDIENTE y todas las cuotas
+  mensuales que fueron EXENTO por esa anualidad, incluso meses pasados, pasan a
+  PENDIENTE.
+
+ATOMICIDAD Y SEGURIDAD
+======================
+La creación y anulación deben ejecutarse dentro de una sola transacción SQLite.
+Si falla cualquier efecto (pago, deuda, stock, curso o cuota), se debe hacer
+rollback completo. No deben existir estados intermedios.
+
+El endpoint de anulación sugerido es:
+
+  POST /api/operaciones/{id_operacion}/anular
+
+Cuerpo mínimo:
+
+  { "motivo": "Cobro capturado por error" }
+
+Validaciones obligatorias:
+- la operación existe;
+- está en estado COMPLETADA;
+- el motivo no está vacío;
+- no se permite anular una operación ya ANULADA;
+- el endpoint debe ser idempotente: una repetición no puede crear reversos
+  duplicados;
+- se revierten todos los efectos asociados a la operación.
+
+HISTORIAL Y EXPERIENCIA DE USUARIO
+==================================
+El historial debe listar tanto operaciones pagadas como ventas a cuenta. Debe
+mostrar folio, tipo, cliente, importe, fecha/hora y estado.
+
+En src/historial/TransDetail_Modal.tsx se agregará el botón:
+
+  Anular transacción
+
+El botón se ubicará junto a "Cerrar detalles". Antes de confirmar se mostrará:
+- campo obligatorio para el motivo;
+- advertencia de que la acción es completa e irreversible desde la interfaz;
+- resumen de efectos: pagos, deuda, inventario, curso o cuotas;
+- estado final esperado.
+
+Después de anular se deben recargar historial, dashboard, cuentas por cobrar,
+inventario y cualquier pantalla afectada.
+
+DASHBOARDS Y CONSULTAS QUE DEBEN REVISARSE
+===========================================
+- Historial global de transacciones.
+- Dashboard de ingresos y movimientos recientes.
+- Cuentas por cobrar y saldos por cliente.
+- Indicadores de cuotas pagadas, pendientes y exentas.
+- Indicadores y cupos de cursos.
+- Inventario y alertas de stock.
+
+Los totales no deben contar operaciones ANULADAS como ingresos, cobros,
+inscripciones activas ni deudas exigibles. Los reversos deben quedar visibles
+para auditoría y compensar el periodo definido por fecha_evento.
+
+COMPATIBILIDAD CON DATOS HISTÓRICOS
+===================================
+Los registros existentes fueron creados antes de operaciones, detalles y
+movimientos de inventario. Es posible anular financieramente pagos históricos,
+pero no es posible devolver stock o reconstruir un ticket completo de forma
+automática porque no existe el detalle de los artículos ni un identificador que
+agrupe pagos de una misma venta.
+
+La reversa completa automática aplica a las operaciones creadas después de esta
+migración. Para datos históricos se requerirá un flujo administrativo controlado
+o una migración que los marque como LEGACY.
+
+FUERA DE ALCANCE POR AHORA
+==========================
+- Devoluciones parciales de un ticket.
+- Reversar sólo un producto de una venta.
+- Reversar sólo uno de varios métodos de pago.
+- Integración con bancos, terminales o pasarelas de tarjeta.
+- Gestión de usuarios, permisos y responsable de anulación.
+- Cancelación fiscal CFDI; es un proceso separado de la anulación interna.
+

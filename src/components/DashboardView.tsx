@@ -216,11 +216,11 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
                   </tr>
                 ) : (
                   recentMovementsReal.map((item) => {
-                    const prefijo = item.type === "COMPRA" ? "-" : "+";
+                    const prefijo = item.status === "ANULADA" ? "" : item.type === "COMPRA" ? "-" : "+";
                     const formattedAmount = `${prefijo}$${item.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
                     const fechaFormateada = formatearFecha(item.date);
                     return (
-                      <tr key={item.id} className="hover:bg-white/5 transition-colors">
+                      <tr key={item.id} className={cn("hover:bg-white/5 transition-colors", item.status === "ANULADA" && "opacity-60")}>
                         <td className="px-5 py-3.5 whitespace-nowrap text-zinc-500 text-xs">
                           {fechaFormateada.split(" ")[0]}<br />
                           {fechaFormateada.split(" ")[1] || ""}
@@ -229,11 +229,11 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
                           {item.client}
                         </td>
                         <td className="px-5 py-3.5 text-zinc-500 text-xs max-w-[150px] truncate" title={item.concept}>
-                          {item.concept}
+                          {item.status === "ANULADA" ? `ANULADA · ${item.concept}` : item.concept}
                         </td>
                         <td className={cn(
                           "px-5 py-3.5 text-right font-medium font-mono text-xs",
-                          item.type === "COMPRA" ? "text-red-400" : "text-emerald-400"
+                          item.status === "ANULADA" ? "text-zinc-500 line-through" : item.type === "COMPRA" ? "text-red-400" : "text-emerald-400"
                         )}>
                           {formattedAmount}
                         </td>

@@ -1,4 +1,4 @@
-from database import get_db_connection
+from database import get_db_connection, generar_folio
 from routers.pagos import (
     _calcular_saldo_deuda,
     _crear_deuda_cuota_si_falta,
@@ -167,6 +167,16 @@ def procesar_checkout_pos(checkout: CheckoutPOS):
         procesados = []
         deudas_a_pagar = []
 
+        # ── Crear operación ──
+        tipo_op = 'VENTA' if checkout.tipo_pago == 'pago' else 'VENTA_CUENTA'
+        folio = generar_folio('V' if checkout.tipo_pago == 'pago' else 'VC', cursor)
+        id_cliente_op = cliente[0] if cliente else None
+        cursor.execute('''
+            INSERT INTO operaciones (folio, tipo_operacion, id_cliente, total, estado, fecha_evento)
+            VALUES (?, ?, ?, ?, 'COMPLETADA', ?)
+        ''', (folio, tipo_op, id_cliente_op, total_final, fecha_actual))
+        id_operacion = cursor.lastrowid
+
         # Determinar la lista de pagos
         lista_pagos = checkout.pagos
         if not lista_pagos and checkout.tipo_pago == "pago":
@@ -215,7 +225,8 @@ def procesar_checkout_pos(checkout: CheckoutPOS):
             if tipo_item == "curso":
                 cursor.execute('''
                     SELECT nombre, capacidad_max, estatus,
-                           (SELECT COUNT(*) FROM inscripciones WHERE id_curso = cursos.id_curso) AS inscritos
+                           (SELECT COUNT(*) FROM inscripciones WHERE id_curso = cursos.id_curso
+                            AND COALESCE(estado_inscripcion, 'ACTIVA') = 'ACTIVA') AS inscritos
                     FROM cursos
                     WHERE id_curso = ?
                 ''', (item.id,))
@@ -259,25 +270,36 @@ def procesar_checkout_pos(checkout: CheckoutPOS):
                     cursor.execute('''
                         INSERT INTO inscripciones (
                             id_cliente, id_curso, nombre_participante, tipo_tarifa,
-                            monto_total, saldo_pendiente, estado_pago, facturado
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, 0)
+                            monto_total, saldo_pendiente, estado_pago, facturado, id_operacion
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)
                     ''', (
                         id_cliente_db, item.id, nombre_participante, tipo_tarifa,
-                        precio_neto_unitario, saldo_pendiente, estado_pago
+                        precio_neto_unitario, saldo_pendiente, estado_pago, id_operacion
                     ))
                     id_inscripcion = cursor.lastrowid
 
+                    id_deuda_curso = None
                     if cliente:
                         id_deuda = _crear_deuda_curso_si_falta(cursor, id_inscripcion)
+                        id_deuda_curso = id_deuda
                         cursor.execute('''
                             UPDATE deudas
                             SET monto_original = ?,
-                                descuento = ?
+                                descuento = ?,
+                                id_operacion = ?
                             WHERE id_deuda = ?
-                        ''', (item.price, descuento_unitario, id_deuda))
+                        ''', (item.price, descuento_unitario, id_operacion, id_deuda))
                         
                         if checkout.tipo_pago == "pago" and precio_neto_unitario > 0:
                             deudas_a_pagar.append((id_deuda, precio_neto_unitario, f"Curso: {nombre_curso}"))
+
+                    cursor.execute('''
+                        INSERT INTO operacion_detalles
+                        (id_operacion, tipo_detalle, id_referencia, descripcion, cantidad,
+                         precio_unitario, descuento, iva, importe_total, id_deuda, id_inscripcion)
+                        VALUES (?, 'CURSO', ?, ?, 1, ?, ?, ?, ?, ?, ?)
+                    ''', (id_operacion, item.id, nombre_curso, item.price, descuento_unitario,
+                          iva_unitario, precio_neto_unitario, id_deuda_curso, id_inscripcion))
 
                 procesados.append({"tipo": "curso", "id": item.id, "cantidad": cantidad})
 
@@ -301,15 +323,32 @@ def procesar_checkout_pos(checkout: CheckoutPOS):
                     if cursor.rowcount == 0:
                         raise HTTPException(status_code=409, detail=f"Stock insuficiente para {nombre_producto} (conflicto de concurrencia).")
 
+                    # Registrar movimiento de inventario
+                    cursor.execute('''
+                        INSERT INTO movimientos_inventario
+                        (id_operacion, id_inventario, tipo_movimiento, cantidad, fecha_evento, observacion)
+                        VALUES (?, ?, 'SALIDA_VENTA', ?, ?, ?)
+                    ''', (id_operacion, item.id, cantidad, fecha_actual, f"Venta POS: {nombre_producto}"))
+
+                id_deuda_inv = None
                 if cliente and monto_neto_item > 0:
                     cursor.execute('''
-                        INSERT INTO deudas (id_cliente, tipo_deuda, id_referencia, concepto, monto_total, estado, fecha_generacion, monto_original, descuento)
-                        VALUES (?, 'OTRO', NULL, ?, ?, 'PENDIENTE', ?, ?, ?)
-                    ''', (cliente[0], f"Venta POS: {nombre_producto}", monto_neto_item, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), monto_item, descuento_item))
-                    id_deuda = cursor.lastrowid
+                        INSERT INTO deudas (id_cliente, tipo_deuda, id_referencia, concepto, monto_total, estado, fecha_generacion, monto_original, descuento, id_operacion)
+                        VALUES (?, 'OTRO', NULL, ?, ?, 'PENDIENTE', ?, ?, ?, ?)
+                    ''', (cliente[0], f"Venta POS: {nombre_producto}", monto_neto_item, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), monto_item, descuento_item, id_operacion))
+                    id_deuda_inv = cursor.lastrowid
                     
                     if checkout.tipo_pago == "pago":
-                        deudas_a_pagar.append((id_deuda, monto_neto_item, f"Producto: {nombre_producto}"))
+                        deudas_a_pagar.append((id_deuda_inv, monto_neto_item, f"Producto: {nombre_producto}"))
+
+                # Detalle de operación
+                cursor.execute('''
+                    INSERT INTO operacion_detalles
+                    (id_operacion, tipo_detalle, id_referencia, descripcion, cantidad,
+                     precio_unitario, descuento, iva, importe_total, id_deuda)
+                    VALUES (?, 'INVENTARIO', ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (id_operacion, item.id, nombre_producto, cantidad, item.price,
+                      descuento_item, iva_item, monto_neto_item, id_deuda_inv))
 
                 procesados.append({"tipo": "inventario", "id": item.id, "cantidad": cantidad})
 
@@ -330,15 +369,20 @@ def procesar_checkout_pos(checkout: CheckoutPOS):
                 monto_orig = deuda_row[2] if (deuda_row[2] is not None) else deuda_row[0]
                 nuevo_monto_total = round(monto_orig - descuento_item + iva_item, 2)
                 
-                # Actualizar la deuda con el nuevo descuento e IVA
+                # Actualizar la deuda con el nuevo descuento, IVA e id_operacion
                 cursor.execute('''
                     UPDATE deudas
                     SET monto_original = ?,
                         descuento = ?,
                         monto_total = ?,
-                        estado = 'PENDIENTE'
+                        estado = 'PENDIENTE',
+                        id_operacion = ?
                     WHERE id_deuda = ?
-                ''', (monto_orig, descuento_item, nuevo_monto_total, id_deuda))
+                ''', (monto_orig, descuento_item, nuevo_monto_total, id_operacion, id_deuda))
+
+                # Propagar id_operacion a la cuota
+                cursor.execute('UPDATE cuotas_asociados SET id_operacion = ? WHERE id_cuota = ?',
+                               (id_operacion, item.id))
                 
                 saldo = _calcular_saldo_deuda(cursor, id_deuda)
                 if saldo is None or saldo <= 0:
@@ -348,6 +392,16 @@ def procesar_checkout_pos(checkout: CheckoutPOS):
                     raise HTTPException(status_code=400, detail=f"El pago de {item.name or item.id} (${monto_neto_item:.2f}) excede su saldo pendiente (${saldo:.2f}).")
 
                 deudas_a_pagar.append((id_deuda, monto_neto_item, f"Cuota: {item.name}"))
+
+                # Detalle de operación
+                cursor.execute('''
+                    INSERT INTO operacion_detalles
+                    (id_operacion, tipo_detalle, id_referencia, descripcion, cantidad,
+                     precio_unitario, descuento, iva, importe_total, id_deuda)
+                    VALUES (?, 'CUOTA', ?, ?, 1, ?, ?, ?, ?, ?)
+                ''', (id_operacion, item.id, item.name or f"Cuota #{item.id}", item.price,
+                      descuento_item, iva_item, monto_neto_item, id_deuda))
+
                 procesados.append({"tipo": "cuota", "id": item.id, "cantidad": cantidad})
 
             else:
@@ -396,7 +450,8 @@ def procesar_checkout_pos(checkout: CheckoutPOS):
                             monto_abono,
                             pago.metodo_pago,
                             obs,
-                            fecha_pago=fecha_pago_dt
+                            fecha_pago=fecha_pago_dt,
+                            id_operacion=id_operacion
                         )
                         pagos_usados[indice_pago] = round(pagos_usados[indice_pago] + monto_abono, 2)
                         monto_restante_deuda = round(monto_restante_deuda - monto_abono, 2)
@@ -405,6 +460,8 @@ def procesar_checkout_pos(checkout: CheckoutPOS):
         return {
             "estatus": "exito",
             "mensaje": "Venta registrada correctamente.",
+            "id_operacion": id_operacion,
+            "folio": folio,
             "total": total_final,
             "subtotal": subtotal_calculado,
             "descuento_porcentaje": descuento_pct,
