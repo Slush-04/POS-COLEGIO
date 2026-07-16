@@ -123,7 +123,7 @@ export function ModalImportarExcel({ isOpen, onClose, onSuccess, curso }: ModalI
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-zinc-900 border border-border-table rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+      <div className="bg-white/[0.045] backdrop-blur-xl border border-white/12 rounded-xl shadow-[0_16px_45px_rgba(0,0,0,0.22)] w-full max-w-4xl max-h-[90vh] flex flex-col">
         
         <div className="flex items-center justify-between p-6 border-b border-border-table bg-zinc-900/50">
           <div>

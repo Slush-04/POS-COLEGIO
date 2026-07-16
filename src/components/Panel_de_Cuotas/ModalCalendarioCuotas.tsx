@@ -77,7 +77,7 @@ export function ModalCalendarioCuotas({ isOpen, onClose, associateName = "Asocia
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-zinc-900 border border-border-table rounded-xl shadow-xl w-full max-w-xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="bg-white/[0.045] backdrop-blur-xl border border-white/12 rounded-xl shadow-[0_16px_45px_rgba(0,0,0,0.22)] w-full max-w-xl max-h-[90vh] overflow-hidden flex flex-col">
         <div className="relative p-6 border-b border-white/10 flex flex-col items-center justify-center text-center">
           <h2 className="text-xl font-bold text-white flex items-center justify-center gap-2">
             <CalendarIcon className="w-5 h-5 text-zinc-400" />

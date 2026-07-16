@@ -7,6 +7,7 @@ interface SettingsLayoutProps {
   activeTab: SettingsTab;
   onTabChange: (tab: SettingsTab) => void;
   children: ReactNode;
+  actions?: ReactNode;
 }
 
 const tabs = [
@@ -17,12 +18,15 @@ const tabs = [
   { id: "inventory" as const, label: "Catálogo / Inventario", icon: Package },
 ];
 
-export function SettingsLayout({ activeTab, onTabChange, children }: SettingsLayoutProps) {
+export function SettingsLayout({ activeTab, onTabChange, children, actions }: SettingsLayoutProps) {
   return (
     <div className="p-8 max-w-[1400px] mx-auto h-[calc(100vh-64px)] flex flex-col">
-      <div className="mb-8 flex-shrink-0">
-        <h1 className="text-3xl font-bold text-white tracking-tight">Configuración del Sistema</h1>
-        <p className="text-zinc-400 mt-1">Personaliza la apariencia, detalles institucionales y parámetros operativos.</p>
+      <div className="mb-8 flex-shrink-0 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-white tracking-tight">Configuración del Sistema</h1>
+          <p className="text-zinc-400 mt-1">Personaliza la apariencia, detalles institucionales y parámetros operativos.</p>
+        </div>
+        {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
       </div>
 
       <div className="flex flex-col lg:flex-row gap-8 flex-1 min-h-0">

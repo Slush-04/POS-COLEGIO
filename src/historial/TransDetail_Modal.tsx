@@ -56,6 +56,7 @@ export function TransactionDetailModal({ isOpen, onClose, onAnulled, transaction
     const [error, setError] = useState("");
     const [operationDetail, setOperationDetail] = useState<OperationDetail | null>(null);
     const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+    const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
     useEffect(() => {
         setShowConfirmation(false);
@@ -210,10 +211,25 @@ export function TransactionDetailModal({ isOpen, onClose, onAnulled, transaction
                         Anular Transacción
                     </button>
                     <button
-                        onClick={() => downloadTicketPdf(transaction, operationDetail)}
-                        className="px-5 py-2 bg-violet-600/90 hover:bg-violet-500 text-white rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+                        onClick={async () => {
+                            if (isDownloadingPdf) return;
+                            setIsDownloadingPdf(true);
+                            setError("");
+                            try {
+                                const response = await fetch("http://localhost:8000/api/configuracion/comprobante");
+                                if (!response.ok) throw new Error("No se pudo obtener la configuración de los comprobantes.");
+                                const config = await response.json();
+                                downloadTicketPdf(transaction, operationDetail, config);
+                            } catch (err) {
+                                setError(err instanceof Error ? err.message : "Error al descargar el PDF.");
+                            } finally {
+                                setIsDownloadingPdf(false);
+                            }
+                        }}
+                        disabled={isDownloadingPdf}
+                        className="px-5 py-2 bg-violet-600/90 hover:bg-violet-500 disabled:opacity-50 text-white rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2"
                     >
-                        <Download className="w-4 h-4" />
+                        {isDownloadingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                         Descargar ticket PDF
                     </button>
                     <button onClick={onClose} className="px-6 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm font-medium transition-colors">

@@ -262,7 +262,7 @@ export function ClientsView() {
         {/* Modal for Add/Edit Record */}
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <div className="w-full max-w-[700px] bg-zinc-950 border border-border-table rounded-custom shadow-2xl p-6 relative max-h-[90vh] overflow-y-auto">
+            <div className="w-full max-w-[700px] bg-white/[0.045] backdrop-blur-xl border border-white/12 rounded-custom shadow-[0_16px_45px_rgba(0,0,0,0.22)] p-6 relative max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-2">
                   <UserPlus className="w-5 h-5 text-zinc-300" />

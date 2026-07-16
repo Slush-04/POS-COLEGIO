@@ -26,7 +26,6 @@ class SerieFolio(BaseModel):
 
 class ConfiguracionOperacion(BaseModel):
     series: List[SerieFolio]
-    motivo_anulacion_minimo: int = Field(ge=3, le=100)
 
 
 def _leer_configuracion(cursor):
@@ -55,11 +54,8 @@ def _leer_configuracion(cursor):
         serie["ultimo_folio"] = ultimo[0] if ultimo else None
         series.append(serie)
 
-    cursor.execute("SELECT motivo_anulacion_minimo FROM configuracion_operacion WHERE id = 1")
-    regla = cursor.fetchone()
     return {
         "series": series,
-        "motivo_anulacion_minimo": regla[0] if regla else 5,
     }
 
 
@@ -101,11 +97,6 @@ def actualizar_configuracion_operacion(configuracion: ConfiguracionOperacion):
                 SET prefijo = ?, fecha_actualizacion = CURRENT_TIMESTAMP
                 WHERE clave = ?
             ''', (serie.prefijo, serie.clave))
-        cursor.execute('''
-            UPDATE configuracion_operacion
-            SET motivo_anulacion_minimo = ?, fecha_actualizacion = CURRENT_TIMESTAMP
-            WHERE id = 1
-        ''', (configuracion.motivo_anulacion_minimo,))
         conexion.commit()
         return _leer_configuracion(cursor)
     except Exception as exc:
@@ -113,3 +104,113 @@ def actualizar_configuracion_operacion(configuracion: ConfiguracionOperacion):
         raise HTTPException(status_code=500, detail=f"No se pudo guardar la configuración: {exc}")
     finally:
         conexion.close()
+
+
+class FiscalSettingsModel(BaseModel):
+    razon_social: str = Field(..., min_length=1, max_length=150)
+    rfc: str = Field(..., min_length=12, max_length=13)
+    codigo_postal: str = Field(..., min_length=5, max_length=5)
+    regimen_fiscal: str = Field(..., min_length=3, max_length=3)
+    domicilio_fiscal: str = Field(..., min_length=1, max_length=250)
+    telefono: str = Field(..., min_length=1, max_length=50)
+    correo: str = Field(..., min_length=1, max_length=100)
+    representante_legal: str = Field(..., min_length=1, max_length=100)
+
+
+class TicketSettingsModel(BaseModel):
+    titulo_comprobante: str = Field(..., min_length=1, max_length=100)
+    pie_pagina: str = Field(..., min_length=1, max_length=250)
+    mostrar_datos_fiscales: bool
+
+
+@router.get("/fiscal")
+def obtener_configuracion_fiscal():
+    conexion = get_db_connection()
+    conexion.row_factory = sqlite3.Row
+    try:
+        cursor = conexion.cursor()
+        cursor.execute("SELECT razon_social, rfc, codigo_postal, regimen_fiscal, domicilio_fiscal, telefono, correo, representante_legal FROM configuracion_fiscal WHERE id = 1")
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Configuración fiscal no encontrada.")
+        return dict(row)
+    finally:
+        conexion.close()
+
+
+@router.put("/fiscal")
+def actualizar_configuracion_fiscal(datos: FiscalSettingsModel):
+    conexion = get_db_connection()
+    try:
+        cursor = conexion.cursor()
+        cursor.execute('''
+            UPDATE configuracion_fiscal
+            SET razon_social = ?, rfc = ?, codigo_postal = ?, regimen_fiscal = ?, domicilio_fiscal = ?, telefono = ?, correo = ?, representante_legal = ?, fecha_actualizacion = CURRENT_TIMESTAMP
+            WHERE id = 1
+        ''', (datos.razon_social, datos.rfc.upper(), datos.codigo_postal, datos.regimen_fiscal, datos.domicilio_fiscal, datos.telefono, datos.correo, datos.representante_legal))
+        conexion.commit()
+        return {"status": "success", "mensaje": "Configuración fiscal actualizada correctamente."}
+    except Exception as exc:
+        conexion.rollback()
+        raise HTTPException(status_code=500, detail=f"No se pudo guardar la configuración fiscal: {exc}")
+    finally:
+        conexion.close()
+
+
+@router.get("/tickets")
+def obtener_configuracion_tickets():
+    conexion = get_db_connection()
+    conexion.row_factory = sqlite3.Row
+    try:
+        cursor = conexion.cursor()
+        cursor.execute("SELECT titulo_comprobante, pie_pagina, mostrar_datos_fiscales FROM configuracion_tickets WHERE id = 1")
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Configuración de tickets no encontrada.")
+        res = dict(row)
+        res["mostrar_datos_fiscales"] = bool(res["mostrar_datos_fiscales"])
+        return res
+    finally:
+        conexion.close()
+
+
+@router.put("/tickets")
+def actualizar_configuracion_tickets(datos: TicketSettingsModel):
+    conexion = get_db_connection()
+    try:
+        cursor = conexion.cursor()
+        cursor.execute('''
+            UPDATE configuracion_tickets
+            SET titulo_comprobante = ?, pie_pagina = ?, mostrar_datos_fiscales = ?, fecha_actualizacion = CURRENT_TIMESTAMP
+            WHERE id = 1
+        ''', (datos.titulo_comprobante, datos.pie_pagina, 1 if datos.mostrar_datos_fiscales else 0))
+        conexion.commit()
+        return {"status": "success", "mensaje": "Configuración de tickets actualizada correctamente."}
+    except Exception as exc:
+        conexion.rollback()
+        raise HTTPException(status_code=500, detail=f"No se pudo guardar la configuración de tickets: {exc}")
+    finally:
+        conexion.close()
+
+
+@router.get("/comprobante")
+def obtener_comprobante_configuracion():
+    conexion = get_db_connection()
+    conexion.row_factory = sqlite3.Row
+    try:
+        cursor = conexion.cursor()
+        cursor.execute("SELECT razon_social, rfc, codigo_postal, regimen_fiscal, domicilio_fiscal, telefono, correo, representante_legal FROM configuracion_fiscal WHERE id = 1")
+        fiscal = cursor.fetchone()
+        cursor.execute("SELECT titulo_comprobante, pie_pagina, mostrar_datos_fiscales FROM configuracion_tickets WHERE id = 1")
+        tickets = cursor.fetchone()
+        if not fiscal or not tickets:
+            raise HTTPException(status_code=404, detail="Configuraciones no encontradas.")
+        res_tickets = dict(tickets)
+        res_tickets["mostrar_datos_fiscales"] = bool(res_tickets["mostrar_datos_fiscales"])
+        return {
+            "fiscal": dict(fiscal),
+            "tickets": res_tickets
+        }
+    finally:
+        conexion.close()
+

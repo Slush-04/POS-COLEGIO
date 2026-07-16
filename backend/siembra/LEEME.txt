@@ -1,0 +1,155 @@
+================================================================================
+          SISTEMA DE SIEMBRA DE DATOS INICIALES — DOCUMENTACIÓN
+================================================================================
+
+Última actualización: Julio 2026
+Ubicación: backend/siembra/
+
+================================================================================
+1. ¿QUÉ SON LOS DATOS SEMBRADOS?
+================================================================================
+
+Los datos sembrados son registros iniciales que se cargan en la base de datos
+del sistema para que este pueda funcionar sin estar vacío durante la etapa de
+desarrollo y pruebas. Representan clientes, cursos, productos de inventario y
+movimientos financieros que simulan la operación real del colegio.
+
+No son datos temporales ni de prueba desechable. Son la base de datos inicial
+controlada que alimenta al sistema mientras este se encuentra en desarrollo.
+
+
+================================================================================
+2. ¿POR QUÉ SE USAN DENTRO DEL SISTEMA?
+================================================================================
+
+- Permiten correr el programa completo sin que la base de datos esté vacía.
+- Facilitan el desarrollo de nuevas funcionalidades al contar con datos
+  realistas para validar el comportamiento.
+- Sirven como punto de referencia para verificar que los dashboards,
+  el historial de transacciones, el POS, los cursos y las cuotas funcionan
+  correctamente.
+- Permiten a cualquier desarrollador nuevo levantar el sistema y ver
+  inmediatamente cómo luce y cómo funciona con datos reales.
+
+
+================================================================================
+3. ¿QUÉ TIPO DE INFORMACIÓN SE SIEMBRA?
+================================================================================
+
+La siembra se divide en dos fases:
+
+FASE 1 — Catálogos Base (s01_catalogos.py):
+  - 25 clientes con diferentes tipos: Asociado, General, Estudiante,
+    Colaborador, Asociado Externo.
+  - 25 cursos con fechas distribuidas a lo largo de 2026, cada uno con
+    precios diferenciados por tipo de tarifa.
+  - 5 artículos de inventario (3 productos físicos + 2 servicios).
+  - Cuotas históricas de asociados (mensuales y anuales), con escenarios
+    variados: al corriente, con adeudo, con pagos parciales.
+
+FASE 2 — Simulación de Operaciones (s02_operaciones.py):
+  - 6 ventas de contado a través del POS (productos de inventario).
+  - 4 ventas a cuenta (crédito) cargadas a clientes específicos.
+  - 6 inscripciones a cursos pasados, algunas pagadas y otras pendientes.
+  - Cobros de cuotas pendientes a asociados activos.
+  - 4 abonos parciales y totales a deudas pendientes.
+
+
+================================================================================
+4. ¿QUÉ PROCESOS REALES SE SIMULAN CON ESTOS DATOS?
+================================================================================
+
+Las operaciones de la Fase 2 no se insertan directamente en la base de datos.
+En su lugar, se ejecutan a través de los endpoints reales de la API del backend,
+exactamente como lo haría un usuario desde la interfaz:
+
+  - POST /api/pos/checkout       → Ventas de contado y ventas a cuenta
+  - POST /api/cursos/{id}/inscripciones → Inscripciones a cursos
+  - POST /api/cuotas/pagar       → Cobro de cuotas de asociados
+  - POST /api/pagos/deudas/abono → Abonos a deudas pendientes
+
+Esto garantiza que:
+  a) Los flujos de negocio completos se validan con cada siembra.
+  b) Las operaciones, folios, deudas y movimientos se generan correctamente.
+  c) Los dashboards y reportes reflejan información consistente.
+
+
+================================================================================
+5. ¿CUÁNDO SE DEBEN EJECUTAR LOS COMANDOS DE SIEMBRA?
+================================================================================
+
+Ejecutar la siembra SOLO en los siguientes casos:
+
+  a) Primera vez que se levanta el sistema (base de datos no existe).
+  b) Después de un cambio estructural en la base de datos que requiera
+     recrearla desde cero.
+  c) Cuando se necesite restaurar la base de datos a un estado conocido
+     y limpio para pruebas.
+
+COMANDOS:
+
+  # Siembra normal (solo si la base está vacía):
+  python backend/siembra/ejecutar_siembra.py
+
+  # Reset completo (elimina la base y siembra desde cero):
+  python backend/siembra/ejecutar_siembra.py --reset
+
+NOTA: Si la base de datos ya contiene registros y no se usa --reset,
+el script NO duplicará datos. Simplemente informará que la base ya
+tiene contenido y terminará sin hacer cambios.
+
+
+================================================================================
+6. ¿POR QUÉ NO SE ELIMINAN AUTOMÁTICAMENTE?
+================================================================================
+
+Los datos sembrados NO se eliminan cada vez que se corre el programa porque:
+
+  - Funcionan como la base de datos de trabajo durante el desarrollo.
+  - Eliminarlos al iniciar provocaría perder cualquier dato nuevo que se
+    haya registrado manualmente durante pruebas.
+  - El servidor (main.py) solo inicializa el esquema de tablas al arrancar,
+    nunca borra ni reinserta datos.
+  - Los datos sembrados son acumulativos: una vez cargados, permanecen
+    hasta que se decida explícitamente reiniciar con --reset.
+
+
+================================================================================
+7. ¿CUÁNDO DEBERÍAN ELIMINARSE O REEMPLAZARSE POR DATOS REALES?
+================================================================================
+
+Los datos sembrados deberán eliminarse o reemplazarse cuando:
+
+  a) El sistema esté listo para entrar en producción real.
+  b) El colegio comience a registrar clientes, cursos y operaciones reales.
+  c) Se decida migrar a un entorno de producción separado.
+
+En ese momento:
+  1. Eliminar la base de datos de desarrollo (sistema_colegio.db).
+  2. Levantar el sistema limpio (main.py creará las tablas vacías).
+  3. Registrar los datos reales directamente desde la interfaz.
+
+Los archivos de siembra pueden conservarse como respaldo o referencia,
+pero no deben ejecutarse sobre la base de datos de producción.
+
+
+================================================================================
+8. ¿QUÉ ARCHIVOS FORMAN PARTE DE ESTA LÓGICA?
+================================================================================
+
+Todos los archivos se encuentran en la carpeta backend/siembra/:
+
+  backend/siembra/
+  ├── LEEME.txt              ← Este documento (documentación)
+  ├── ejecutar_siembra.py    ← Orquestador principal
+  ├── s01_catalogos.py       ← Catálogos: clientes, cursos, inventario
+  ├── s02_operaciones.py     ← Simulación de operaciones vía API
+  └── __init__.py             ← Marcador de paquete Python
+
+Archivo de base de datos generado:
+  sistema_colegio.db         ← En la raíz del proyecto (un nivel arriba de backend/)
+
+
+================================================================================
+                         FIN DEL DOCUMENTO
+================================================================================

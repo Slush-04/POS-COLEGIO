@@ -209,6 +209,8 @@ def inicializar_base_datos():
             tipo_operacion     TEXT NOT NULL,
             id_cliente         INTEGER,
             total              REAL NOT NULL DEFAULT 0,
+            metodo_pago        TEXT,
+            observacion        TEXT,
             estado             TEXT NOT NULL DEFAULT 'COMPLETADA',
             fecha_evento       DATETIME NOT NULL,
             fecha_registro     DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -285,12 +287,46 @@ def inicializar_base_datos():
         VALUES (1, 5)
     ''')
 
+    # 13. CONFIGURACIÓN FISCAL
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS configuracion_fiscal (
+            id                     INTEGER PRIMARY KEY CHECK (id = 1),
+            razon_social           TEXT NOT NULL DEFAULT 'Colegio San Ignacio A.C.',
+            rfc                    TEXT NOT NULL DEFAULT 'CSI990101XX1',
+            codigo_postal          TEXT NOT NULL DEFAULT '10004',
+            regimen_fiscal         TEXT NOT NULL DEFAULT '603',
+            domicilio_fiscal       TEXT NOT NULL DEFAULT 'Av. Educación 123, Col. Centro, Ciudad, Estado.',
+            telefono               TEXT NOT NULL DEFAULT '+52 (55) 1234-5678',
+            correo                 TEXT NOT NULL DEFAULT 'administracion@colegio.edu',
+            representante_legal    TEXT NOT NULL DEFAULT 'Dra. Elena Ramos',
+            fecha_actualizacion    DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    cursor.execute('''
+        INSERT OR IGNORE INTO configuracion_fiscal (id) VALUES (1)
+    ''')
+
+    # 14. CONFIGURACIÓN DE TICKETS Y RECIBOS
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS configuracion_tickets (
+            id                      INTEGER PRIMARY KEY CHECK (id = 1),
+            titulo_comprobante      TEXT NOT NULL DEFAULT 'Comprobante de operación',
+            pie_pagina              TEXT NOT NULL DEFAULT 'Documento administrativo generado desde el historial.',
+            mostrar_datos_fiscales  INTEGER NOT NULL DEFAULT 1,
+            fecha_actualizacion     DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    cursor.execute('''
+        INSERT OR IGNORE INTO configuracion_tickets (id) VALUES (1)
+    ''')
+
     for clave, nombre, prefijo in [
         ("V", "Ventas de contado", "V"),
         ("VC", "Ventas a cuenta", "VC"),
         ("CU", "Cursos e inscripciones", "CUR"),
         ("QT", "Cuotas", "CUO"),
         ("PD", "Pagos de deuda", "PAG"),
+        ("E", "Egresos y compras", "E"),
     ]:
         cursor.execute('''
             INSERT OR IGNORE INTO configuracion_folios
@@ -319,6 +355,14 @@ def inicializar_base_datos():
         cursor.execute("ALTER TABLE configuracion_folios ADD COLUMN periodo_actual TEXT")
     except sqlite3.OperationalError:
         pass
+    for col_sql in [
+        "ALTER TABLE operaciones ADD COLUMN metodo_pago TEXT",
+        "ALTER TABLE operaciones ADD COLUMN observacion TEXT",
+    ]:
+        try:
+            cursor.execute(col_sql)
+        except sqlite3.OperationalError:
+            pass
     # La condonación es distinta al descuento aplicado al crear una venta POS:
     # disminuye una cuenta por cobrar, pero nunca genera un ingreso.
     try:

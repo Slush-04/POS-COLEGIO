@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
-import { Search, ScanBarcode, GraduationCap, Monitor, BookOpen, Book, Layers, Minus, Plus, Edit2, CreditCard, Banknote, X, AlertCircle } from "lucide-react";
+import { Search, ScanBarcode, GraduationCap, Monitor, BookOpen, Book, Layers, Minus, Plus, Edit2, CreditCard, Banknote, X, AlertCircle, ShoppingBag } from "lucide-react";
 import { ModalCobroPOS } from "./ModalCobroPOS";
+import { ModalCompraPOS } from "./ModalCompraPOS";
 
 export function POSView() {
   // --- Estados de Búsqueda de Clientes ---
@@ -19,6 +20,7 @@ export function POSView() {
   const [cart, setCart] = useState<any[]>([]);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [isCobroModalOpen, setIsCobroModalOpen] = useState(false);
+  const [isCompraModalOpen, setIsCompraModalOpen] = useState(false);
   const [lastTransactionId, setLastTransactionId] = useState<number | null>(null);
 
   const fetchLastTransaction = async () => {
@@ -69,6 +71,7 @@ export function POSView() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        if (isCompraModalOpen) return;
         e.preventDefault();
         setIsCobroModalOpen((prev) => {
           if (!prev) {
@@ -84,7 +87,7 @@ export function POSView() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [cart]);
+  }, [cart, isCompraModalOpen]);
 
   // --- Búsqueda de Clientes ---
   useEffect(() => {
@@ -319,40 +322,50 @@ export function POSView() {
       <div className="flex-1 flex flex-col gap-6 overflow-y-auto pr-2 custom-scrollbar">
 
         {/* Client Search */}
-        <div className="relative">
-          <Search className="w-5 h-5 text-zinc-500 absolute left-4 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Buscar Cliente (Nombre o Teléfono)..."
-            value={clientSearchQuery}
-            onChange={(e) => setClientSearchQuery(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-zinc-900/30 border border-border-table rounded-custom text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all"
-          />
-          {selectedClient && (
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-500/20 text-blue-400 px-3 py-1 rounded flex items-center gap-2 text-sm">
-              {selectedClient.nombre} ({selectedClient.tipo_cliente})
-              <button onClick={() => setSelectedClient(null)}><X className="w-4 h-4" /></button>
-            </div>
-          )}
+        <div className="flex gap-3">
+          <div className="relative min-w-0 flex-1">
+            <Search className="w-5 h-5 text-zinc-500 absolute left-4 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Buscar Cliente (Nombre o Teléfono)..."
+              value={clientSearchQuery}
+              onChange={(e) => setClientSearchQuery(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 bg-zinc-900/30 border border-border-table rounded-custom text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all"
+            />
+            {selectedClient && (
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-500/20 text-blue-400 px-3 py-1 rounded flex items-center gap-2 text-sm">
+                {selectedClient.nombre} ({selectedClient.tipo_cliente})
+                <button onClick={() => setSelectedClient(null)}><X className="w-4 h-4" /></button>
+              </div>
+            )}
 
-          {/* Autocomplete Clientes */}
-          {!selectedClient && clientResults.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-zinc-900 border border-border-table rounded-md shadow-lg z-10 max-h-48 overflow-y-auto">
-              {clientResults.map(client => (
-                <div
-                  key={client.id_cliente}
-                  className="px-4 py-2 hover:bg-zinc-800 cursor-pointer text-sm text-white flex justify-between"
-                  onClick={() => {
-                    setSelectedClient(client);
-                    setClientSearchQuery("");
-                  }}
-                >
-                  <span>{client.nombre}</span>
-                  <span className="text-zinc-500 text-xs">{client.telefono} - {client.tipo_cliente}</span>
-                </div>
-              ))}
-            </div>
-          )}
+            {/* Autocomplete Clientes */}
+            {!selectedClient && clientResults.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-zinc-900 border border-border-table rounded-md shadow-lg z-10 max-h-48 overflow-y-auto">
+                {clientResults.map(client => (
+                  <div
+                    key={client.id_cliente}
+                    className="px-4 py-2 hover:bg-zinc-800 cursor-pointer text-sm text-white flex justify-between"
+                    onClick={() => {
+                      setSelectedClient(client);
+                      setClientSearchQuery("");
+                    }}
+                  >
+                    <span>{client.nombre}</span>
+                    <span className="text-zinc-500 text-xs">{client.telefono} - {client.tipo_cliente}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsCompraModalOpen(true)}
+            className="flex min-w-36 items-center justify-center gap-2 rounded-custom border border-red-400/30 bg-red-500/10 px-5 py-3 text-sm font-bold text-red-300 transition-colors hover:border-red-400/60 hover:bg-red-500/20 hover:text-red-200"
+          >
+            <ShoppingBag className="h-4 w-4" />
+            Compras
+          </button>
         </div>
 
         {/* Categorías (Accesos Rápidos) */}
@@ -649,6 +662,11 @@ export function POSView() {
           setItemSearchQuery(prev => prev + " ");
           setTimeout(() => setItemSearchQuery(prev => prev.trim()), 50);
         }}
+      />
+      <ModalCompraPOS
+        isOpen={isCompraModalOpen}
+        onClose={() => setIsCompraModalOpen(false)}
+        onSuccess={fetchLastTransaction}
       />
     </div>
   );

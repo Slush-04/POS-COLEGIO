@@ -1,4 +1,4 @@
-from database import get_db_connection
+from database import get_db_connection, generar_folio
 # pyrefly: ignore [missing-import]
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -737,6 +737,8 @@ def obtener_historial_transacciones():
                 o.folio,
                 o.tipo_operacion,
                 o.total,
+                o.metodo_pago AS metodo_pago_operacion,
+                o.observacion AS observacion_operacion,
                 o.estado,
                 o.fecha_evento,
                 o.fecha_registro,
@@ -806,7 +808,11 @@ def obtener_historial_transacciones():
                 "registeredAt": operacion["fecha_registro"],
                 "cancelledAt": operacion["fecha_anulacion"],
                 "serieFolio": operacion["folio"],
-                "client": operacion["nombre_cliente"] or "Público General",
+                "client": operacion["nombre_cliente"] or (
+                    "Proveedor no especificado"
+                    if tipo_operacion == "COMPRA"
+                    else "Público General"
+                ),
                 "type": tipo_front,
                 "operationType": tipo_operacion,
                 "concept": operacion["conceptos"] or tipo_operacion.replace("_", " ").title(),
@@ -814,9 +820,17 @@ def obtener_historial_transacciones():
                 "paymentMethod": (
                     "Cuenta por cobrar"
                     if tipo_operacion == "VENTA_CUENTA"
-                    else (operacion["metodos_pago"] or "Sin pago").replace(",", ", ").title()
+                    else (
+                        operacion["metodo_pago_operacion"]
+                        or operacion["metodos_pago"]
+                        or "Sin pago"
+                    ).replace(",", ", ").title()
                 ),
-                "observation": operacion["observaciones"] or "",
+                "observation": (
+                    operacion["observacion_operacion"]
+                    or operacion["observaciones"]
+                    or ""
+                ),
                 "status": operacion["estado"],
                 "cancellationReason": operacion["motivo_anulacion"] or "",
             })

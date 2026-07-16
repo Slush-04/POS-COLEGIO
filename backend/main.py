@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import clientes, cursos, pagos, inventario, cuotas, pos, operaciones, configuracion
+from routers import clientes, compras, cursos, pagos, inventario, cuotas, pos, operaciones, configuracion
 from database import inicializar_base_datos
 
 # Inicializamos el sistema administrativo
@@ -20,6 +20,7 @@ app.add_middleware(
 # CONEXIÓN DE MÓDULOS (ROUTERS)
 # ==========================================
 app.include_router(clientes.router)
+app.include_router(compras.router)
 app.include_router(cursos.router)
 app.include_router(pagos.router)
 app.include_router(inventario.router)

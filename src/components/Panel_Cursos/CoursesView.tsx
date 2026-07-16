@@ -1,9 +1,10 @@
 import { ClipboardList, Download, UserPlus, DollarSign, Plus, Edit2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { ModalNuevoCurso } from "./ModalNuevoCurso";
-import { ModalPago } from "../modalpagos_v1";
+import { ModalPago } from "../Panel_Deudas/modalpagos_v1";
 import { ModalInscripcionManual } from "./ModalInscripcionManual";
 import { ModalImportarExcel } from "./ModalImportarExcel";
+import { Paginacion } from "../ui/Paginacion";
 
 export function CoursesView() {
   const currentYear = new Date().getFullYear().toString();
@@ -24,6 +25,8 @@ export function CoursesView() {
   const [selectedPaymentDeudaId, setSelectedPaymentDeudaId] = useState<number | null>(null);
   const [isInscripcionManualOpen, setIsInscripcionManualOpen] = useState(false);
   const [isImportarExcelOpen, setIsImportarExcelOpen] = useState(false);
+  const [paginaParticipantes, setPaginaParticipantes] = useState(1);
+  const itemsPorPaginaParticipantes = 10;
 
   const cargarParticipantes = () => {
     if (cursoSeleccionado && cursoSeleccionado.id_curso) {
@@ -52,6 +55,7 @@ export function CoursesView() {
 
   useEffect(() => {
     cargarParticipantes();
+    setPaginaParticipantes(1);
   }, [cursoSeleccionado]);
 
   const actualizarFacturado = async (idInscripcion: number, facturado: number) => {
@@ -85,6 +89,11 @@ export function CoursesView() {
     const [año, mes, dia] = curso.fecha_inicio.split("-");
     return año === añoSeleccionado && mes === mesSeleccionado;
   });
+
+  const totalPaginasParticipantes = Math.ceil(participantesCurso.length / itemsPorPaginaParticipantes) || 1;
+  const startIdx = (paginaParticipantes - 1) * itemsPorPaginaParticipantes;
+  const endIdx = Math.min(startIdx + itemsPorPaginaParticipantes, participantesCurso.length);
+  const participantesPaginados = participantesCurso.slice(startIdx, endIdx);
 
   return (
     <div className="p-8 max-w-[1200px] mx-auto space-y-8">
@@ -304,7 +313,7 @@ export function CoursesView() {
                     </td>
                   </tr>
                 ) : (
-                  participantesCurso.map((p, idx) => (
+                  participantesPaginados.map((p, idx) => (
                     <tr key={p.id_inscripcion || idx} className="hover:bg-white/5 transition-colors">
                       <td className="px-6 py-4 text-white font-medium">{p.nombre_participante}</td>
                       <td className="px-6 py-4 text-zinc-400 font-mono">{p.rfc || 'S/N'}</td>
@@ -356,13 +365,14 @@ export function CoursesView() {
           </div>
 
           {/* Pagination Footer */}
-          <div className="p-4 bg-black/20 text-xs text-zinc-500 flex justify-between items-center">
-            <span>Mostrando {participantesCurso.length} registros</span>
-            <div className="flex gap-2">
-              <button className="text-zinc-400 hover:text-white px-2 py-1">&lt;</button>
-              <button className="text-zinc-400 hover:text-white px-2 py-1">&gt;</button>
-            </div>
-          </div>
+          <Paginacion
+            currentPage={paginaParticipantes}
+            totalPages={totalPaginasParticipantes}
+            totalItems={participantesCurso.length}
+            itemsPerPage={itemsPorPaginaParticipantes}
+            isLoading={false}
+            onPageChange={(nuevaPagina) => setPaginaParticipantes(nuevaPagina)}
+          />
 
         </div>
       ) : (

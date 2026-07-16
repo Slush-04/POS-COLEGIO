@@ -1,13 +1,33 @@
-from database import get_db_connection, generar_folio
+"""
+s01_catalogos.py — Siembra de catálogos base
+=============================================
+Puebla las tablas de clientes, cursos e inventario con registros iniciales.
+No genera operaciones, deudas ni movimientos financieros.
+
+Las cuotas históricas de asociados se generan aquí como inserts directos
+porque no existe un endpoint para crear cuotas retroactivas.
+"""
+
+import os
+import sys
 import sqlite3
 from datetime import date, datetime
 
+# Asegurar que el paquete backend sea importable
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from database import get_db_connection, generar_folio
+
+# ============================================================
+# CONSTANTES
+# ============================================================
 MONTO_CUOTA_MENSUAL = 500.0
 MONTO_CUOTA_ANUAL = 5000.0
-FECHA_LIMITE = date(2026, 6, 30)
+FECHA_LIMITE = date(2026, 6, 30)  # Último mes con cuotas históricas
 
-
-CLIENTES_PRUEBA = [
+# ============================================================
+# CATÁLOGO DE CLIENTES (25)
+# ============================================================
+CLIENTES = [
     {
         "nombre": "Roberto Campos Ruiz",
         "telefono": "5511223344",
@@ -214,6 +234,53 @@ CLIENTES_PRUEBA = [
     },
 ]
 
+# ============================================================
+# CATÁLOGO DE CURSOS (25)
+# Fechas fijas relativas al año 2026 para evitar datos futuros
+# ============================================================
+CURSOS = [
+    {"nombre": "Reformas Fiscales 2026",                       "ponente": "C.P. Alejandro Moran",       "fecha_inicio": "2026-01-12", "duracion": 2,  "capacidad_max": 40, "precio_general": 2000.0},
+    {"nombre": "Contabilidad Electronica Avanzada",             "ponente": "Dra. Patricia Ortiz",         "fecha_inicio": "2026-01-26", "duracion": 3,  "capacidad_max": 35, "precio_general": 1800.0},
+    {"nombre": "Declaracion Anual Personas Fisicas",            "ponente": "Mtro. Humberto Chavez",       "fecha_inicio": "2026-02-09", "duracion": 1,  "capacidad_max": 50, "precio_general": 1200.0},
+    {"nombre": "Nomina Digital y CFDI 4.0",                     "ponente": "Lic. Claudia Ledesma",        "fecha_inicio": "2026-02-23", "duracion": 2,  "capacidad_max": 45, "precio_general": 1500.0},
+    {"nombre": "Planeacion Fiscal Empresarial",                 "ponente": "C.P. Ricardo Benitez",        "fecha_inicio": "2026-03-09", "duracion": 4,  "capacidad_max": 30, "precio_general": 2500.0},
+    {"nombre": "Excel Aplicado a Auditoria",                    "ponente": "Mtro. Sergio Villalobos",     "fecha_inicio": "2026-03-23", "duracion": 2,  "capacidad_max": 25, "precio_general": 1000.0},
+    {"nombre": "Auditoria de Estados Financieros",              "ponente": "C.P. Martin Guzman",          "fecha_inicio": "2026-04-06", "duracion": 3,  "capacidad_max": 30, "precio_general": 2200.0},
+    {"nombre": "Estrategias de Defensa Fiscal",                 "ponente": "Abog. Sofia Ruiz",            "fecha_inicio": "2026-04-20", "duracion": 2,  "capacidad_max": 40, "precio_general": 2400.0},
+    {"nombre": "Taller de Devolucion de IVA",                   "ponente": "C.P. Laura Castro",           "fecha_inicio": "2026-05-04", "duracion": 1,  "capacidad_max": 50, "precio_general": 1300.0},
+    {"nombre": "Regimen Simplificado de Confianza (RESICO)",    "ponente": "Mtro. Hector Ramos",          "fecha_inicio": "2026-05-18", "duracion": 2,  "capacidad_max": 45, "precio_general": 1100.0},
+    {"nombre": "Precios de Transferencia Basico",               "ponente": "Dra. Monica Silva",           "fecha_inicio": "2026-06-01", "duracion": 2,  "capacidad_max": 20, "precio_general": 2800.0},
+    {"nombre": "Finanzas para No Financieros",                  "ponente": "Lic. Daniel Torres",          "fecha_inicio": "2026-06-15", "duracion": 3,  "capacidad_max": 60, "precio_general": 900.0},
+    {"nombre": "Impuestos Internacionales",                     "ponente": "Mtro. Javier Reyes",          "fecha_inicio": "2026-06-29", "duracion": 3,  "capacidad_max": 25, "precio_general": 3200.0},
+    {"nombre": "Taller de CFDI de Traslado y Carta Porte",      "ponente": "Lic. Estela Perez",           "fecha_inicio": "2026-07-07", "duracion": 1,  "capacidad_max": 50, "precio_general": 1400.0},
+    {"nombre": "Analisis e Interpretacion de Estados Financieros","ponente": "C.P. Ignacio Mora",          "fecha_inicio": "2026-07-21", "duracion": 2,  "capacidad_max": 35, "precio_general": 1600.0},
+    {"nombre": "Costos para la Toma de Decisiones",             "ponente": "Mtra. Alicia Gomez",          "fecha_inicio": "2026-08-04", "duracion": 2,  "capacidad_max": 30, "precio_general": 1700.0},
+    {"nombre": "Prevencion de Lavado de Dinero (PLD)",          "ponente": "Lic. Roberto Franco",         "fecha_inicio": "2026-08-18", "duracion": 3,  "capacidad_max": 40, "precio_general": 2600.0},
+    {"nombre": "Taller de ISR Sueldos y Salarios",              "ponente": "C.P. Teresa Mendoza",         "fecha_inicio": "2026-09-01", "duracion": 1,  "capacidad_max": 45, "precio_general": 1250.0},
+    {"nombre": "Introduccion a las NIIF/IFRS",                  "ponente": "Dr. Fernando Rios",           "fecha_inicio": "2026-09-15", "duracion": 4,  "capacidad_max": 30, "precio_general": 3000.0},
+    {"nombre": "Fiscalidad en Comercio Exterior",               "ponente": "Lic. Gabriela Solis",         "fecha_inicio": "2026-09-29", "duracion": 2,  "capacidad_max": 35, "precio_general": 2100.0},
+    {"nombre": "Cierre Fiscal Personas Morales",                "ponente": "Mtro. Arturo Luna",           "fecha_inicio": "2026-10-13", "duracion": 3,  "capacidad_max": 50, "precio_general": 2500.0},
+    {"nombre": "Valuacion de Empresas",                         "ponente": "Lic. Mario Pineda",           "fecha_inicio": "2026-10-27", "duracion": 2,  "capacidad_max": 25, "precio_general": 2700.0},
+    {"nombre": "Auditoria Forense Aplicada",                    "ponente": "Dra. Sandra Ortiz",           "fecha_inicio": "2026-11-10", "duracion": 3,  "capacidad_max": 30, "precio_general": 2900.0},
+    {"nombre": "Regimen Fiscal de Plataformas Digitales",       "ponente": "C.P. Oscar Chavez",           "fecha_inicio": "2026-11-24", "duracion": 1,  "capacidad_max": 40, "precio_general": 1350.0},
+    {"nombre": "Taller Practico de Rellenado de Declaraciones", "ponente": "Mtra. Claudia Vega",          "fecha_inicio": "2026-12-07", "duracion": 2,  "capacidad_max": 45, "precio_general": 1050.0},
+]
+
+# ============================================================
+# CATÁLOGO DE INVENTARIO (5)
+# ============================================================
+INVENTARIO = [
+    ("Manual de Reformas Fiscales 2026", "Producto", "Libros",     250.0,  450.0, 18, 5),
+    ("Guia Practica de ISR",             "Producto", "Libros",     180.0,  320.0, 12, 4),
+    ("Agenda Fiscal Profesional",        "Producto", "Papeleria",   90.0,  180.0, 25, 8),
+    ("Constancia Digital de Curso",      "Servicio", "Servicios",    0.0,  150.0, 999, 0),
+    ("Reposicion de Credencial",         "Servicio", "Servicios",   40.0,  120.0, 50, 5),
+]
+
+
+# ============================================================
+# FUNCIONES AUXILIARES
+# ============================================================
 
 def _rfc_prueba(indice: int, nombre: str) -> str:
     partes = nombre.upper().split()
@@ -228,19 +295,17 @@ def _curp_prueba(indice: int, nombre: str) -> str:
 
 
 def _meses_desde(fecha_registro: str):
+    """Devuelve lista de tuplas (anio, mes) desde fecha_registro hasta FECHA_LIMITE."""
     inicio = date.fromisoformat(fecha_registro)
     if inicio > FECHA_LIMITE:
         return []
-    actual = FECHA_LIMITE
     meses = []
-    total = (actual.year - inicio.year) * 12 + (actual.month - inicio.month)
-
+    total = (FECHA_LIMITE.year - inicio.year) * 12 + (FECHA_LIMITE.month - inicio.month)
     for offset in range(total + 1):
         mes_base = inicio.month + offset
         anio = inicio.year + (mes_base - 1) // 12
         mes = ((mes_base - 1) % 12) + 1
         meses.append((anio, mes))
-
     return meses
 
 
@@ -259,21 +324,23 @@ def _insertar_pago(cursor, id_deuda, id_cliente, monto, metodo, fecha_pago, obse
     ''', (id_deuda, id_cliente, monto, metodo, fecha_pago, observacion, id_operacion))
 
 
+# ============================================================
+# SIEMBRA DE CUOTAS HISTÓRICAS (inserts directos)
+# ============================================================
+
 def _crear_cuota_mensual(cursor, id_cliente, anio, mes, estado, monto=MONTO_CUOTA_MENSUAL, pago=0.0):
     fecha_pago = f"{anio}-{mes:02d}-05" if estado in ("PAGADO", "EXENTO") else None
-    
-    # 1. Crear Folio y Operación para el devengamiento o la venta de la cuota
+
     folio_op = generar_folio('QT', cursor)
     tipo_op = 'VENTA' if estado == 'PAGADO' else 'VENTA_CUENTA'
     fecha_evento = f"{anio}-{mes:02d}-01 08:00:00"
-    
+
     cursor.execute('''
         INSERT INTO operaciones (folio, tipo_operacion, id_cliente, total, estado, fecha_evento)
         VALUES (?, ?, ?, ?, 'COMPLETADA', ?)
     ''', (folio_op, tipo_op, id_cliente, monto, fecha_evento))
     id_operacion = cursor.lastrowid
 
-    # 2. Insertar en cuotas_asociados vinculada a la operación
     cursor.execute('''
         INSERT INTO cuotas_asociados (id_cliente, tipo_cuota, anio, mes, monto, estado_pago, fecha_pago, id_operacion)
         VALUES (?, 'Mensual', ?, ?, ?, ?, ?, ?)
@@ -283,107 +350,59 @@ def _crear_cuota_mensual(cursor, id_cliente, anio, mes, estado, monto=MONTO_CUOT
     if estado == "EXENTO":
         return id_cuota
 
-    # 3. Crear deuda vinculada a la operación
     concepto = f"Cuota mensual {mes:02d}/{anio}"
-    id_deuda = _insertar_deuda(
-        cursor,
-        id_cliente,
-        "CUOTA_MENSUAL",
-        id_cuota,
-        concepto,
-        monto,
-        estado,
-        f"{anio}-{mes:02d}-01",
-        id_operacion
-    )
+    id_deuda = _insertar_deuda(cursor, id_cliente, "CUOTA_MENSUAL", id_cuota, concepto, monto, estado, f"{anio}-{mes:02d}-01", id_operacion)
 
-    # 4. Registrar detalle de la operación
     cursor.execute('''
         INSERT INTO operacion_detalles (id_operacion, tipo_detalle, id_referencia, descripcion, cantidad, precio_unitario, descuento, iva, importe_total, id_deuda)
         VALUES (?, 'CUOTA', ?, ?, 1, ?, 0.0, 0.0, ?, ?)
     ''', (id_operacion, id_cuota, concepto, monto, monto, id_deuda))
 
-    # 5. Si hay pago, registrar la operación del cobro/abono
     if pago > 0:
         folio_pago = generar_folio('PD', cursor)
         fecha_pago_evento = f"{anio}-{mes:02d}-05 10:00:00"
         cursor.execute('''
             INSERT INTO operaciones (folio, tipo_operacion, id_cliente, total, estado, fecha_evento)
-            VALUES (?, ?, ?, ?, 'COMPLETADA', ?)
-        ''', (folio_pago, 'PAGO_DEUDA', id_cliente, pago, fecha_pago_evento))
+            VALUES (?, 'PAGO_DEUDA', ?, ?, 'COMPLETADA', ?)
+        ''', (folio_pago, id_cliente, pago, fecha_pago_evento))
         id_op_pago = cursor.lastrowid
-
-        _insertar_pago(
-            cursor,
-            id_deuda,
-            id_cliente,
-            pago,
-            "efectivo",
-            f"{anio}-{mes:02d}-05",
-            f"Pago de prueba: {concepto}",
-            id_op_pago
-        )
+        _insertar_pago(cursor, id_deuda, id_cliente, pago, "efectivo", f"{anio}-{mes:02d}-05", f"Pago cuota mensual {mes:02d}/{anio}", id_op_pago)
 
     return id_cuota
 
 
 def _crear_cuota_anual_pagada(cursor, id_cliente, anio):
-    # 1. Crear Folio y Operación para la cuota anual
     folio_op = generar_folio('QT', cursor)
     fecha_evento = f"{anio}-01-01 08:00:00"
-    
+
     cursor.execute('''
         INSERT INTO operaciones (folio, tipo_operacion, id_cliente, total, estado, fecha_evento)
-        VALUES (?, ?, ?, ?, 'COMPLETADA', ?)
-    ''', (folio_op, 'VENTA', id_cliente, MONTO_CUOTA_ANUAL, fecha_evento))
+        VALUES (?, 'VENTA', ?, ?, 'COMPLETADA', ?)
+    ''', (folio_op, id_cliente, MONTO_CUOTA_ANUAL, fecha_evento))
     id_operacion = cursor.lastrowid
 
-    # 2. Insertar cuota anual vinculada a la operación
     cursor.execute('''
         INSERT INTO cuotas_asociados (id_cliente, tipo_cuota, anio, mes, monto, estado_pago, fecha_pago, id_operacion)
         VALUES (?, 'Anual', ?, NULL, ?, 'PAGADO', ?, ?)
     ''', (id_cliente, anio, MONTO_CUOTA_ANUAL, f"{anio}-02-05", id_operacion))
     id_cuota = cursor.lastrowid
 
-    # 3. Crear deuda vinculada a la operación
     concepto = f"Cuota anual {anio}"
-    id_deuda = _insertar_deuda(
-        cursor,
-        id_cliente,
-        "CUOTA_ANUAL",
-        id_cuota,
-        concepto,
-        MONTO_CUOTA_ANUAL,
-        "PAGADO",
-        f"{anio}-01-01",
-        id_operacion
-    )
+    id_deuda = _insertar_deuda(cursor, id_cliente, "CUOTA_ANUAL", id_cuota, concepto, MONTO_CUOTA_ANUAL, "PAGADO", f"{anio}-01-01", id_operacion)
 
-    # 4. Registrar detalle de operación
     cursor.execute('''
         INSERT INTO operacion_detalles (id_operacion, tipo_detalle, id_referencia, descripcion, cantidad, precio_unitario, descuento, iva, importe_total, id_deuda)
         VALUES (?, 'CUOTA', ?, ?, 1, ?, 0.0, 0.0, ?, ?)
     ''', (id_operacion, id_cuota, concepto, MONTO_CUOTA_ANUAL, MONTO_CUOTA_ANUAL, id_deuda))
 
-    # 5. Crear operación de Pago y registrar el pago
     folio_pago = generar_folio('PD', cursor)
     fecha_pago_evento = f"{anio}-02-05 10:00:00"
     cursor.execute('''
         INSERT INTO operaciones (folio, tipo_operacion, id_cliente, total, estado, fecha_evento)
-        VALUES (?, ?, ?, ?, 'COMPLETADA', ?)
-    ''', (folio_pago, 'PAGO_DEUDA', id_cliente, MONTO_CUOTA_ANUAL, fecha_pago_evento))
+        VALUES (?, 'PAGO_DEUDA', ?, ?, 'COMPLETADA', ?)
+    ''', (folio_pago, id_cliente, MONTO_CUOTA_ANUAL, fecha_pago_evento))
     id_op_pago = cursor.lastrowid
-
-    _insertar_pago(
-        cursor,
-        id_deuda,
-        id_cliente,
-        MONTO_CUOTA_ANUAL,
-        "transferencia",
-        f"{anio}-02-05",
-        f"Pago anual de prueba {anio}",
-        id_op_pago
-    )
+    _insertar_pago(cursor, id_deuda, id_cliente, MONTO_CUOTA_ANUAL, "transferencia", f"{anio}-02-05", f"Pago cuota anual {anio}", id_op_pago)
 
 
 def _sembrar_cuotas_asociado(cursor, id_cliente, fecha_registro, escenario):
@@ -418,13 +437,18 @@ def _sembrar_cuotas_asociado(cursor, id_cliente, fecha_registro, escenario):
         _crear_cuota_mensual(cursor, id_cliente, anio, mes, estado, pago=pago)
 
 
+# ============================================================
+# FUNCIONES PÚBLICAS DE SIEMBRA
+# ============================================================
+
 def sembrar_clientes():
+    """Inserta los 25 clientes base y genera cuotas históricas para los asociados."""
     conexion = None
     try:
         conexion = get_db_connection()
         cursor = conexion.cursor()
 
-        for indice, cliente in enumerate(CLIENTES_PRUEBA, start=1):
+        for indice, cliente in enumerate(CLIENTES, start=1):
             nombre = cliente["nombre"]
             estatus_operativo = cliente.get("estatus_operativo", "Activo")
             rfc = _rfc_prueba(indice, nombre)
@@ -437,44 +461,115 @@ def sembrar_clientes():
                     sector, fecha_registro
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
-                nombre,
-                cliente["telefono"],
-                cliente["correo"],
-                nombre,
-                rfc,
-                curp,
-                "612",
-                "G03",
-                cliente["tipo_cliente"],
-                estatus_operativo,
-                cliente.get("sector", "Normal"),
+                nombre, cliente["telefono"], cliente["correo"], nombre,
+                rfc, curp, "612", "G03", cliente["tipo_cliente"],
+                estatus_operativo, cliente.get("sector", "Normal"),
                 cliente["fecha_registro"],
             ))
             id_cliente = cursor.lastrowid
 
-            if cliente["tipo_cliente"] == "Asociado" and "escenario_cuotas" in cliente:
+            if cliente["tipo_cliente"] == "Asociado":
                 _sembrar_cuotas_asociado(
-                    cursor,
-                    id_cliente,
-                    cliente["fecha_registro"],
+                    cursor, id_cliente, cliente["fecha_registro"],
                     cliente.get("escenario_cuotas", "al_corriente"),
                 )
 
         conexion.commit()
-        print(f"Exito: se sembraron {len(CLIENTES_PRUEBA)} clientes de prueba con cuotas historicas.")
+        print(f"  [OK] {len(CLIENTES)} clientes sembrados (con cuotas históricas para asociados).")
 
     except sqlite3.IntegrityError as e:
         if conexion:
             conexion.rollback()
-        print(f"Error de integridad al sembrar clientes: {e}")
+        print(f"  [ERROR] Integridad al sembrar clientes: {e}")
     except Exception as e:
         if conexion:
             conexion.rollback()
-        print(f"Error inesperado al sembrar clientes: {e}")
+        print(f"  [ERROR] Inesperado al sembrar clientes: {e}")
     finally:
         if conexion:
             conexion.close()
 
 
-if __name__ == "__main__":
+def sembrar_cursos():
+    """Inserta los 25 cursos base con precios diferenciados por tipo de tarifa."""
+    conexion = None
+    try:
+        conexion = get_db_connection()
+        cursor = conexion.cursor()
+
+        from datetime import timedelta
+
+        for curso in CURSOS:
+            inicio = date.fromisoformat(curso["fecha_inicio"])
+            fin = inicio + timedelta(days=curso["duracion"])
+            pg = curso["precio_general"]
+
+            cursor.execute('''
+                INSERT INTO cursos (
+                    nombre, ponente, fecha_inicio, fecha_fin, capacidad_max,
+                    precio_general, precio_asociado, precio_asociado_externo,
+                    precio_estudiante, precio_colaborador, estatus
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVO')
+            ''', (
+                curso["nombre"], curso["ponente"],
+                inicio.isoformat(), fin.isoformat(), curso["capacidad_max"],
+                pg, round(pg * 0.80, 2), round(pg * 0.90, 2),
+                round(pg * 0.50, 2), round(pg * 0.30, 2),
+            ))
+
+        conexion.commit()
+        print(f"  [OK] {len(CURSOS)} cursos sembrados.")
+
+    except sqlite3.IntegrityError as e:
+        if conexion:
+            conexion.rollback()
+        print(f"  [ERROR] Integridad al sembrar cursos: {e}")
+    except Exception as e:
+        if conexion:
+            conexion.rollback()
+        print(f"  [ERROR] Inesperado al sembrar cursos: {e}")
+    finally:
+        if conexion:
+            conexion.close()
+
+
+def sembrar_inventario():
+    """Inserta los 5 artículos de inventario base."""
+    conexion = None
+    try:
+        conexion = get_db_connection()
+        cursor = conexion.cursor()
+
+        cursor.executemany('''
+            INSERT INTO inventario (
+                nombre, tipo, categoria, precio_costo, precio_venta,
+                stock_actual, stock_minimo, estatus
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+        ''', INVENTARIO)
+
+        conexion.commit()
+        print(f"  [OK] {len(INVENTARIO)} artículos de inventario sembrados.")
+
+    except sqlite3.IntegrityError as e:
+        if conexion:
+            conexion.rollback()
+        print(f"  [ERROR] Integridad al sembrar inventario: {e}")
+    except Exception as e:
+        if conexion:
+            conexion.rollback()
+        print(f"  [ERROR] Inesperado al sembrar inventario: {e}")
+    finally:
+        if conexion:
+            conexion.close()
+
+
+def sembrar_catalogos():
+    """Ejecuta la siembra completa de catálogos."""
+    print("\n── Fase 1: Catálogos Base ──")
     sembrar_clientes()
+    sembrar_cursos()
+    sembrar_inventario()
+
+
+if __name__ == "__main__":
+    sembrar_catalogos()

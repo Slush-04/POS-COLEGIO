@@ -1,6 +1,6 @@
 import { X, DollarSign, CreditCard, Smartphone, Banknote, Receipt, Check, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { cn } from "../lib/utils";
+import { cn } from "../../lib/utils";
 
 interface ModalPagoProps {
     isOpen: boolean;
@@ -191,7 +191,7 @@ export function ModalPago({ isOpen, onClose, participantName, amount = "0", deud
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="modal-pago-title">
-            <div className="bg-zinc-900 border border-border-table rounded-xl shadow-2xl w-full max-w-4xl my-auto">
+            <div className="bg-white/[0.045] backdrop-blur-xl border border-white/12 rounded-xl shadow-[0_16px_45px_rgba(0,0,0,0.22)] w-full max-w-4xl my-auto">
                 <div className="flex items-center justify-between py-4 px-6 border-b border-white/10">
                     <div>
                         <h2 id="modal-pago-title" className="text-xl font-bold text-white">Registrar Pago</h2>
