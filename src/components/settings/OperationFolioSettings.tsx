@@ -24,6 +24,9 @@ interface TicketSettings {
   titulo_comprobante: string;
   pie_pagina: string;
   mostrar_datos_fiscales: boolean;
+  ubicacion_emisor: "ARRIBA" | "ABAJO";
+  alineacion_emisor: "IZQUIERDA" | "CENTRO" | "DERECHA";
+  alineacion_titulo: "IZQUIERDA" | "CENTRO" | "DERECHA";
 }
 
 interface OperationSettings {
@@ -249,6 +252,64 @@ export const OperationFolioSettings = forwardRef<OperationFolioSettingsHandle>(f
                   placeholder="Ej. Documento sin valor fiscal"
                 />
                 <p className="text-[10px] text-zinc-500">Leyenda que se imprimirá al final de cada comprobante.</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-zinc-300">Ubicación Datos Emisor</label>
+                <select
+                  value={settings.tickets.ubicacion_emisor || "ARRIBA"}
+                  onChange={(e) => {
+                    setSettings((current) => current ? {
+                      ...current,
+                      tickets: { ...current.tickets, ubicacion_emisor: e.target.value as "ARRIBA" | "ABAJO" }
+                    } : null);
+                    setMessage(null);
+                  }}
+                  className="w-full px-3 py-2.5 bg-black/35 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-blue-400/70"
+                >
+                  <option value="ARRIBA">Arriba (Derecha)</option>
+                  <option value="ABAJO">Abajo (Detrás de observaciones)</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-zinc-300">Alineación Datos Emisor</label>
+                <select
+                  value={settings.tickets.alineacion_emisor || "IZQUIERDA"}
+                  onChange={(e) => {
+                    setSettings((current) => current ? {
+                      ...current,
+                      tickets: { ...current.tickets, alineacion_emisor: e.target.value as "IZQUIERDA" | "CENTRO" | "DERECHA" }
+                    } : null);
+                    setMessage(null);
+                  }}
+                  className="w-full px-3 py-2.5 bg-black/35 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-blue-400/70"
+                >
+                  <option value="IZQUIERDA">Izquierda</option>
+                  <option value="CENTRO">Centrada</option>
+                  <option value="DERECHA">Derecha</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-zinc-300">Alineación del Título</label>
+                <select
+                  value={settings.tickets.alineacion_titulo || "IZQUIERDA"}
+                  onChange={(e) => {
+                    setSettings((current) => current ? {
+                      ...current,
+                      tickets: { ...current.tickets, alineacion_titulo: e.target.value as "IZQUIERDA" | "CENTRO" | "DERECHA" }
+                    } : null);
+                    setMessage(null);
+                  }}
+                  className="w-full px-3 py-2.5 bg-black/35 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-blue-400/70"
+                >
+                  <option value="IZQUIERDA">Izquierda</option>
+                  <option value="CENTRO">Centrada</option>
+                  <option value="DERECHA">Derecha</option>
+                </select>
               </div>
             </div>
 

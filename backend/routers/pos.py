@@ -172,9 +172,9 @@ def procesar_checkout_pos(checkout: CheckoutPOS):
         folio = generar_folio('V' if checkout.tipo_pago == 'pago' else 'VC', cursor)
         id_cliente_op = cliente[0] if cliente else None
         cursor.execute('''
-            INSERT INTO operaciones (folio, tipo_operacion, id_cliente, total, estado, fecha_evento)
-            VALUES (?, ?, ?, ?, 'COMPLETADA', ?)
-        ''', (folio, tipo_op, id_cliente_op, total_final, fecha_actual))
+            INSERT INTO operaciones (folio, tipo_operacion, id_cliente, total, estado, fecha_evento, observacion)
+            VALUES (?, ?, ?, ?, 'COMPLETADA', ?, ?)
+        ''', (folio, tipo_op, id_cliente_op, total_final, fecha_actual, checkout.observacion))
         id_operacion = cursor.lastrowid
 
         # Determinar la lista de pagos

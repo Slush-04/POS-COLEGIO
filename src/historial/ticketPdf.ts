@@ -12,7 +12,14 @@ interface TicketTransaction {
 }
 
 interface TicketOperationDetail {
-  detalles?: Array<{ descripcion?: string; cantidad?: number; importe_total?: number }>;
+  detalles?: Array<{
+    descripcion?: string;
+    cantidad?: number;
+    precio_unitario?: number;
+    descuento?: number;
+    iva?: number;
+    importe_total?: number;
+  }>;
   pagos?: Array<{ tipo_movimiento: string; monto_pagado: number; metodo_pago: string }>;
 }
 
@@ -31,6 +38,9 @@ export interface ComprobanteConfig {
     titulo_comprobante: string;
     pie_pagina: string;
     mostrar_datos_fiscales: boolean;
+    ubicacion_emisor?: "ARRIBA" | "ABAJO";
+    alineacion_emisor?: "IZQUIERDA" | "CENTRO" | "DERECHA";
+    alineacion_titulo?: "IZQUIERDA" | "CENTRO" | "DERECHA";
   };
 }
 
@@ -49,6 +59,9 @@ const DEFAULT_CONFIG: ComprobanteConfig = {
     titulo_comprobante: "Comprobante de operación",
     pie_pagina: "Documento administrativo generado desde el historial.",
     mostrar_datos_fiscales: true,
+    ubicacion_emisor: "ARRIBA",
+    alineacion_emisor: "IZQUIERDA",
+    alineacion_titulo: "IZQUIERDA",
   }
 };
 
@@ -57,6 +70,37 @@ const cleanPdfText = (value: unknown) => String(value ?? "")
   .replace(/[\u0300-\u036f]/g, "")
   .replace(/[^\x20-\x7E]/g, "?")
   .replace(/([\\()])/g, "\\$1");
+
+const wrapText = (text: string, maxLength = 80): string[] => {
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let currentLine = "";
+  
+  words.forEach((word) => {
+    if ((currentLine + " " + word).length <= maxLength) {
+      currentLine = currentLine ? currentLine + " " + word : word;
+    } else {
+      lines.push(currentLine);
+      currentLine = word;
+    }
+  });
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+  return lines;
+};
+
+const getManualObservation = (obs: string) => {
+  if (!obs) return "";
+  const trimmed = obs.trim();
+  if (trimmed.startsWith("Pago POS:")) {
+    if (trimmed.includes(" - ")) {
+      return trimmed.substring(trimmed.indexOf(" - ") + 3).trim();
+    }
+    return "";
+  }
+  return trimmed;
+};
 
 const money = (value: number) => `$${Number(value || 0).toLocaleString("en-US", {
   minimumFractionDigits: 2,
@@ -113,6 +157,22 @@ export function downloadTicketPdf(
     const font = bold ? "F2" : "F1";
     cmd.push(`BT /${font} ${size} Tf ${x} ${y} Td (${cleanPdfText(text)}) Tj ET`);
   };
+  const drawTextAligned = (text: string, x: number, y: number, bold = false, size = 10, align: "IZQUIERDA" | "CENTRO" | "DERECHA" = "IZQUIERDA", containerWidth?: number) => {
+    let finalX = x;
+    const cleanStr = cleanPdfText(text);
+    if (align === "CENTRO" || align === "DERECHA") {
+      const textWidth = cleanStr.length * size * 0.52; // heuristic multiplier for Helvetica
+      if (align === "CENTRO") {
+        const center = containerWidth ? x + containerWidth / 2 : 306; // 306 is page center
+        finalX = center - textWidth / 2;
+      } else {
+        const right = containerWidth ? x + containerWidth : 564; // 564 is right margin
+        finalX = right - textWidth;
+      }
+    }
+    const font = bold ? "F2" : "F1";
+    cmd.push(`BT /${font} ${size} Tf ${finalX} ${y} Td (${cleanStr}) Tj ET`);
+  };
 
   // Start coordinates calculation
   let y = 740;
@@ -129,7 +189,7 @@ export function downloadTicketPdf(
 
   // 2. Subtitle (Document Title)
   setFillColor(0.2, 0.2, 0.2);
-  drawText(config.tickets.titulo_comprobante.toUpperCase(), 48, y, true, 11);
+  drawTextAligned(config.tickets.titulo_comprobante.toUpperCase(), 48, y, true, 11, config.tickets.alineacion_titulo || "IZQUIERDA");
   y -= 12;
 
   // Thin separator
@@ -137,58 +197,80 @@ export function downloadTicketPdf(
   drawLine(48, y, 564, y, 1);
   y -= 20;
 
+  // Split date and time
+  const dateStr = transaction.date || "";
+  let displayDate = dateStr;
+  let displayTime = "";
+  if (dateStr.includes(" ")) {
+    const parts = dateStr.split(" ");
+    displayDate = parts[0];
+    displayTime = parts[1];
+  } else if (dateStr.includes("T")) {
+    const parts = dateStr.split("T");
+    displayDate = parts[0];
+    displayTime = parts[1].split(/[+-Z]/)[0];
+  }
+
   // 3. Metadata columns
-  // Left Column: Trans details
   setFillColor(0.3, 0.3, 0.3);
   drawText("DETALLES DEL MOVIMIENTO", 48, y, true, 8.5);
   
   setFillColor(0.1, 0.1, 0.1);
   drawText(`Folio: ${transaction.serieFolio}`, 48, y - 16, true, 9.5);
-  drawText(`Fecha: ${transaction.date}`, 48, y - 28, false, 9);
-  drawText(`Cliente: ${transaction.client || "Publico General"}`, 48, y - 40, false, 9);
-  drawText(`Tipo: ${transaction.type}`, 48, y - 52, false, 9);
+  drawText(`Fecha: ${displayDate}`, 48, y - 28, false, 9);
+  let metadataOffset = 28;
+  if (displayTime) {
+    drawText(`Hora: ${displayTime}`, 48, y - 40, false, 9);
+    metadataOffset = 40;
+  }
+  drawText(`Cliente: ${transaction.client || "Publico General"}`, 48, y - metadataOffset - 12, false, 9);
+  drawText(`Tipo: ${transaction.type}`, 48, y - metadataOffset - 24, false, 9);
   
-  // Right Column: Issuer Fiscal/Contact Details (if checked)
-  if (config.tickets.mostrar_datos_fiscales) {
+  const showFiscal = config.tickets.mostrar_datos_fiscales;
+  const isEmisorArriba = (config.tickets.ubicacion_emisor || "ARRIBA") === "ARRIBA";
+  
+  let rightColumnHeight = 0;
+  if (showFiscal && isEmisorArriba) {
+    const align = config.tickets.alineacion_emisor || "IZQUIERDA";
     setFillColor(0.3, 0.3, 0.3);
-    drawText("DATOS EMISOR", 320, y, true, 8.5);
+    drawTextAligned("DATOS EMISOR", 320, y, true, 8.5, align, 244);
 
     setFillColor(0.1, 0.1, 0.1);
-    drawText(config.fiscal.razon_social, 320, y - 16, true, 9);
-    drawText(`RFC: ${config.fiscal.rfc}`, 320, y - 28, false, 9);
-    drawText(`Regimen Fiscal: ${config.fiscal.regimen_fiscal}`, 320, y - 40, false, 9);
+    drawTextAligned(config.fiscal.razon_social, 320, y - 16, true, 9, align, 244);
+    drawTextAligned(`RFC: ${config.fiscal.rfc}`, 320, y - 28, false, 9, align, 244);
+    drawTextAligned(`Regimen Fiscal: ${config.fiscal.regimen_fiscal}`, 320, y - 40, false, 9, align, 244);
     
     // Address splitting for layout safety
     const address = config.fiscal.domicilio_fiscal;
     let addLine1 = address;
     let addLine2 = "";
-    if (address.length > 42) {
-      const splitIndex = address.lastIndexOf(" ", 42);
+    if (address.length > 38) {
+      const splitIndex = address.lastIndexOf(" ", 38);
       if (splitIndex > 10) {
         addLine1 = address.substring(0, splitIndex);
         addLine2 = address.substring(splitIndex + 1);
       } else {
-        addLine1 = address.substring(0, 40);
-        addLine2 = address.substring(40);
+        addLine1 = address.substring(0, 35);
+        addLine2 = address.substring(35);
       }
     }
     
-    drawText(`Direccion: ${addLine1}`, 320, y - 52, false, 9);
+    drawTextAligned(`Direccion: ${addLine1}`, 320, y - 52, false, 9, align, 244);
     if (addLine2) {
-      drawText(addLine2, 368, y - 64, false, 9);
-      drawText(`CP: ${config.fiscal.codigo_postal}  Tel: ${config.fiscal.telefono}`, 320, y - 76, false, 9);
-      drawText(`Correo: ${config.fiscal.correo}`, 320, y - 88, false, 9);
-      y -= 95;
+      drawTextAligned(addLine2, 368, y - 64, false, 9, align, 244);
+      drawTextAligned(`CP: ${config.fiscal.codigo_postal}  Tel: ${config.fiscal.telefono}`, 320, y - 76, false, 9, align, 244);
+      drawTextAligned(`Correo: ${config.fiscal.correo}`, 320, y - 88, false, 9, align, 244);
+      rightColumnHeight = 95;
     } else {
-      drawText(`CP: ${config.fiscal.codigo_postal}  Tel: ${config.fiscal.telefono}`, 320, y - 64, false, 9);
-      drawText(`Correo: ${config.fiscal.correo}`, 320, y - 76, false, 9);
-      y -= 85;
+      drawTextAligned(`CP: ${config.fiscal.codigo_postal}  Tel: ${config.fiscal.telefono}`, 320, y - 64, false, 9, align, 244);
+      drawTextAligned(`Correo: ${config.fiscal.correo}`, 320, y - 76, false, 9, align, 244);
+      rightColumnHeight = 85;
     }
-  } else {
-    y -= 60;
   }
 
-  y -= 25;
+  const leftColumnHeight = metadataOffset + 30;
+  const maxColumnHeight = Math.max(leftColumnHeight, rightColumnHeight);
+  y -= (maxColumnHeight + 15);
 
   // 4. Concepts Table Header
   setFillColor(0.95, 0.95, 0.95);
@@ -223,8 +305,8 @@ export function downloadTicketPdf(
     details.slice(0, 18).forEach((detail) => {
       const qty = Number(detail.cantidad || 1);
       const desc = detail.descripcion || transaction.concept || "Concepto administrativo";
-      const totalItem = (detail as any).importe_total != null ? Number((detail as any).importe_total) : transaction.amount;
-      const unitPrice = qty > 0 ? totalItem / qty : totalItem;
+      const totalItem = detail.importe_total != null ? Number(detail.importe_total) : transaction.amount;
+      const unitPrice = detail.precio_unitario != null ? Number(detail.precio_unitario) : (qty > 0 ? totalItem / qty : totalItem);
       drawRow(desc, qty, unitPrice);
     });
   } else {
@@ -239,33 +321,83 @@ export function downloadTicketPdf(
   // 6. Summary / Total Area
   setStrokeColor(0.7, 0.7, 0.7);
   drawLine(48, y, 564, y, 1.5);
-  y -= 22;
+  y -= 18;
 
-  // Total
+  // Calculate totals
+  let subtotal = 0;
+  let discount = 0;
+  let iva = 0;
+  const total = transaction.amount;
+
+  if (details.length) {
+    details.forEach((det) => {
+      const qty = Number(det.cantidad || 1);
+      const price = det.precio_unitario != null ? Number(det.precio_unitario) : 0;
+      subtotal += price * qty;
+      discount += Number(det.descuento || 0);
+      iva += Number(det.iva || 0);
+    });
+  } else {
+    subtotal = total;
+    discount = 0;
+    iva = 0;
+  }
+
+  // Draw Breakdown on the right
+  setFillColor(0.3, 0.3, 0.3);
+  drawTextAligned("Importe:", 380, y, false, 9, "IZQUIERDA");
+  drawTextAligned(money(subtotal), 564, y, false, 9, "DERECHA");
+  y -= 14;
+
+  drawTextAligned("Descuento:", 380, y, false, 9, "IZQUIERDA");
+  drawTextAligned(money(discount), 564, y, false, 9, "DERECHA");
+  y -= 14;
+
+  drawTextAligned("IVA (16%):", 380, y, false, 9, "IZQUIERDA");
+  drawTextAligned(money(iva), 564, y, false, 9, "DERECHA");
+  y -= 14;
+
+  setStrokeColor(0.8, 0.8, 0.8);
+  drawLine(380, y + 4, 564, y + 4, 0.5);
+
   setFillColor(0.15, 0.23, 0.43);
-  drawText("TOTAL A PAGAR:", 380, y, true, 10.5);
-  drawText(money(transaction.amount), 500, y, true, 12);
+  drawTextAligned("Total a Pagar:", 380, y - 10, true, 10.5, "IZQUIERDA");
+  drawTextAligned(money(total), 564, y - 10, true, 12, "DERECHA");
   y -= 25;
 
   // 7. Payment details
   const payments = (operationDetail?.pagos || []).filter((p) => p.tipo_movimiento === "PAGO");
+  
+  const groupedPayments: { [method: string]: number } = {};
+  if (payments.length) {
+    payments.forEach((payment) => {
+      const method = (payment.metodo_pago || "efectivo").toUpperCase();
+      groupedPayments[method] = (groupedPayments[method] || 0) + Number(payment.monto_pagado || 0);
+    });
+  } else if (transaction.paymentMethod) {
+    const method = transaction.paymentMethod.toUpperCase();
+    groupedPayments[method] = transaction.amount;
+  }
+
   setFillColor(0.3, 0.3, 0.3);
   drawText("METODO(S) DE PAGO", 48, y, true, 8.5);
   y -= 16;
   
   setFillColor(0.1, 0.1, 0.1);
-  if (payments.length) {
-    payments.forEach((payment) => {
-      drawText(`${payment.metodo_pago.toUpperCase()}: ${money(payment.monto_pagado)}`, 48, y, false, 9);
+  const paymentKeys = Object.keys(groupedPayments);
+  if (paymentKeys.length) {
+    paymentKeys.forEach((method) => {
+      drawText(`${method}: ${money(groupedPayments[method])}`, 48, y, false, 9);
       y -= 14;
     });
   } else {
-    drawText(`${transaction.paymentMethod || "Sin especificar"}`, 48, y, false, 9);
+    drawText("Sin especificar", 48, y, false, 9);
     y -= 14;
   }
 
-  // 8. Status & Remarks
-  y -= 10;
+  y -= 5;
+
+  // 8. Status
   if (transaction.status === "ANULADA") {
     setFillColor(0.8, 0.1, 0.1);
     drawText("ESTADO: ANULADA", 48, y, true, 10);
@@ -278,16 +410,76 @@ export function downloadTicketPdf(
     y -= 14;
   }
 
-  if (transaction.observation) {
+  y -= 10;
+
+  // 9. Remarks / Manual Observations Box
+  const manualObs = getManualObservation(transaction.observation);
+  if (manualObs) {
+    const wrappedLines = wrapText(manualObs, 95);
+    const boxHeight = 25 + wrappedLines.length * 14;
+    
+    setStrokeColor(0.8, 0.8, 0.8);
+    drawRect(48, y - boxHeight, 516, boxHeight, false, true);
+    
     setFillColor(0.3, 0.3, 0.3);
-    drawText("OBSERVACIONES:", 48, y, true, 8.5);
-    y -= 14;
+    drawText("Comentarios", 56, y - 16, true, 8.5);
+    
     setFillColor(0.15, 0.15, 0.15);
-    drawText(transaction.observation, 48, y, false, 9);
+    wrappedLines.forEach((line, idx) => {
+      drawText(line, 56, y - 32 - idx * 14, false, 9);
+    });
+    
+    y -= (boxHeight + 15);
+  }
+
+  // 10. Emitter Data (if ABAJO)
+  if (showFiscal && !isEmisorArriba) {
+    y -= 10;
+    const align = config.tickets.alineacion_emisor || "CENTRO";
+    
+    setFillColor(0.3, 0.3, 0.3);
+    drawTextAligned("DATOS DEL EMISOR", 48, y, true, 8.5, align, 516);
+    y -= 14;
+
+    setFillColor(0.1, 0.1, 0.1);
+    // 1. Nombre del emisor
+    drawTextAligned(config.fiscal.razon_social, 48, y, true, 9.5, align, 516);
+    y -= 14;
+
+    // 2. RFC y Regimen fiscal
+    const rfcRegimen = `RFC: ${config.fiscal.rfc}    Regimen Fiscal: ${config.fiscal.regimen_fiscal}`;
+    drawTextAligned(rfcRegimen, 48, y, false, 9, align, 516);
+    y -= 14;
+
+    // 3. Dirección y CP
+    const address = `${config.fiscal.domicilio_fiscal} CP: ${config.fiscal.codigo_postal}`;
+    if (address.length > 75) {
+      let line1 = address;
+      let line2 = "";
+      const splitIdx = address.lastIndexOf(" ", 75);
+      if (splitIdx > 20) {
+        line1 = address.substring(0, splitIdx);
+        line2 = address.substring(splitIdx + 1);
+      } else {
+        line1 = address.substring(0, 70);
+        line2 = address.substring(70);
+      }
+      drawTextAligned(line1, 48, y, false, 9, align, 516);
+      y -= 14;
+      drawTextAligned(line2, 48, y, false, 9, align, 516);
+      y -= 14;
+    } else {
+      drawTextAligned(address, 48, y, false, 9, align, 516);
+      y -= 14;
+    }
+
+    // 4. Teléfono y Correo
+    const telCorreo = `Tel: ${config.fiscal.telefono}    Correo: ${config.fiscal.correo}`;
+    drawTextAligned(telCorreo, 48, y, false, 9, align, 516);
     y -= 14;
   }
 
-  // 9. Footer (Fixed at the bottom of the page)
+  // 11. Footer (Fixed at the bottom of the page)
   setStrokeColor(0.8, 0.8, 0.8);
   drawLine(48, 70, 564, 70, 0.5);
   setFillColor(0.4, 0.4, 0.4);

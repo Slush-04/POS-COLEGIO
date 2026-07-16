@@ -121,6 +121,9 @@ class TicketSettingsModel(BaseModel):
     titulo_comprobante: str = Field(..., min_length=1, max_length=100)
     pie_pagina: str = Field(..., min_length=1, max_length=250)
     mostrar_datos_fiscales: bool
+    ubicacion_emisor: str = "ARRIBA"
+    alineacion_emisor: str = "IZQUIERDA"
+    alineacion_titulo: str = "IZQUIERDA"
 
 
 @router.get("/fiscal")
@@ -163,7 +166,7 @@ def obtener_configuracion_tickets():
     conexion.row_factory = sqlite3.Row
     try:
         cursor = conexion.cursor()
-        cursor.execute("SELECT titulo_comprobante, pie_pagina, mostrar_datos_fiscales FROM configuracion_tickets WHERE id = 1")
+        cursor.execute("SELECT titulo_comprobante, pie_pagina, mostrar_datos_fiscales, ubicacion_emisor, alineacion_emisor, alineacion_titulo FROM configuracion_tickets WHERE id = 1")
         row = cursor.fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Configuración de tickets no encontrada.")
@@ -181,9 +184,9 @@ def actualizar_configuracion_tickets(datos: TicketSettingsModel):
         cursor = conexion.cursor()
         cursor.execute('''
             UPDATE configuracion_tickets
-            SET titulo_comprobante = ?, pie_pagina = ?, mostrar_datos_fiscales = ?, fecha_actualizacion = CURRENT_TIMESTAMP
+            SET titulo_comprobante = ?, pie_pagina = ?, mostrar_datos_fiscales = ?, ubicacion_emisor = ?, alineacion_emisor = ?, alineacion_titulo = ?, fecha_actualizacion = CURRENT_TIMESTAMP
             WHERE id = 1
-        ''', (datos.titulo_comprobante, datos.pie_pagina, 1 if datos.mostrar_datos_fiscales else 0))
+        ''', (datos.titulo_comprobante, datos.pie_pagina, 1 if datos.mostrar_datos_fiscales else 0, datos.ubicacion_emisor, datos.alineacion_emisor, datos.alineacion_titulo))
         conexion.commit()
         return {"status": "success", "mensaje": "Configuración de tickets actualizada correctamente."}
     except Exception as exc:
@@ -201,7 +204,7 @@ def obtener_comprobante_configuracion():
         cursor = conexion.cursor()
         cursor.execute("SELECT razon_social, rfc, codigo_postal, regimen_fiscal, domicilio_fiscal, telefono, correo, representante_legal FROM configuracion_fiscal WHERE id = 1")
         fiscal = cursor.fetchone()
-        cursor.execute("SELECT titulo_comprobante, pie_pagina, mostrar_datos_fiscales FROM configuracion_tickets WHERE id = 1")
+        cursor.execute("SELECT titulo_comprobante, pie_pagina, mostrar_datos_fiscales, ubicacion_emisor, alineacion_emisor, alineacion_titulo FROM configuracion_tickets WHERE id = 1")
         tickets = cursor.fetchone()
         if not fiscal or not tickets:
             raise HTTPException(status_code=404, detail="Configuraciones no encontradas.")

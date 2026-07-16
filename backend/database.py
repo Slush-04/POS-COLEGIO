@@ -313,6 +313,9 @@ def inicializar_base_datos():
             titulo_comprobante      TEXT NOT NULL DEFAULT 'Comprobante de operación',
             pie_pagina              TEXT NOT NULL DEFAULT 'Documento administrativo generado desde el historial.',
             mostrar_datos_fiscales  INTEGER NOT NULL DEFAULT 1,
+            ubicacion_emisor        TEXT NOT NULL DEFAULT 'ARRIBA',
+            alineacion_emisor       TEXT NOT NULL DEFAULT 'IZQUIERDA',
+            alineacion_titulo       TEXT NOT NULL DEFAULT 'IZQUIERDA',
             fecha_actualizacion     DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     ''')
@@ -353,6 +356,18 @@ def inicializar_base_datos():
         pass
     try:
         cursor.execute("ALTER TABLE configuracion_folios ADD COLUMN periodo_actual TEXT")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE configuracion_tickets ADD COLUMN ubicacion_emisor TEXT NOT NULL DEFAULT 'ARRIBA'")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE configuracion_tickets ADD COLUMN alineacion_emisor TEXT NOT NULL DEFAULT 'IZQUIERDA'")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE configuracion_tickets ADD COLUMN alineacion_titulo TEXT NOT NULL DEFAULT 'IZQUIERDA'")
     except sqlite3.OperationalError:
         pass
     for col_sql in [
