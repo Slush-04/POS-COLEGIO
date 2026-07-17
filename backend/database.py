@@ -316,6 +316,7 @@ def inicializar_base_datos():
             ubicacion_emisor        TEXT NOT NULL DEFAULT 'ARRIBA',
             alineacion_emisor       TEXT NOT NULL DEFAULT 'IZQUIERDA',
             alineacion_titulo       TEXT NOT NULL DEFAULT 'IZQUIERDA',
+            plantilla               TEXT NOT NULL DEFAULT 'PLANTILLA_1',
             fecha_actualizacion     DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     ''')
@@ -368,6 +369,10 @@ def inicializar_base_datos():
         pass
     try:
         cursor.execute("ALTER TABLE configuracion_tickets ADD COLUMN alineacion_titulo TEXT NOT NULL DEFAULT 'IZQUIERDA'")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE configuracion_tickets ADD COLUMN plantilla TEXT NOT NULL DEFAULT 'PLANTILLA_1'")
     except sqlite3.OperationalError:
         pass
     for col_sql in [

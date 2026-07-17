@@ -27,6 +27,7 @@ interface TicketSettings {
   ubicacion_emisor: "ARRIBA" | "ABAJO";
   alineacion_emisor: "IZQUIERDA" | "CENTRO" | "DERECHA";
   alineacion_titulo: "IZQUIERDA" | "CENTRO" | "DERECHA";
+  plantilla?: "PLANTILLA_1" | "PLANTILLA_2";
 }
 
 interface OperationSettings {
@@ -255,61 +256,24 @@ export const OperationFolioSettings = forwardRef<OperationFolioSettingsHandle>(f
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-zinc-300">Ubicación Datos Emisor</label>
+                <label className="text-sm font-medium text-zinc-300">Plantilla del Ticket PDF</label>
                 <select
-                  value={settings.tickets.ubicacion_emisor || "ARRIBA"}
+                  value={settings.tickets.plantilla || "PLANTILLA_1"}
                   onChange={(e) => {
                     setSettings((current) => current ? {
                       ...current,
-                      tickets: { ...current.tickets, ubicacion_emisor: e.target.value as "ARRIBA" | "ABAJO" }
+                      tickets: { ...current.tickets, plantilla: e.target.value as "PLANTILLA_1" | "PLANTILLA_2" }
                     } : null);
                     setMessage(null);
                   }}
                   className="w-full px-3 py-2.5 bg-black/35 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-blue-400/70"
                 >
-                  <option value="ARRIBA">Arriba (Derecha)</option>
-                  <option value="ABAJO">Abajo (Detrás de observaciones)</option>
+                  <option value="PLANTILLA_1">Plantilla 1: Diseño Clásico (Emisor arriba)</option>
+                  <option value="PLANTILLA_2">Plantilla 2: Diseño Moderno (Emisor centrado abajo)</option>
                 </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-zinc-300">Alineación Datos Emisor</label>
-                <select
-                  value={settings.tickets.alineacion_emisor || "IZQUIERDA"}
-                  onChange={(e) => {
-                    setSettings((current) => current ? {
-                      ...current,
-                      tickets: { ...current.tickets, alineacion_emisor: e.target.value as "IZQUIERDA" | "CENTRO" | "DERECHA" }
-                    } : null);
-                    setMessage(null);
-                  }}
-                  className="w-full px-3 py-2.5 bg-black/35 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-blue-400/70"
-                >
-                  <option value="IZQUIERDA">Izquierda</option>
-                  <option value="CENTRO">Centrada</option>
-                  <option value="DERECHA">Derecha</option>
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-zinc-300">Alineación del Título</label>
-                <select
-                  value={settings.tickets.alineacion_titulo || "IZQUIERDA"}
-                  onChange={(e) => {
-                    setSettings((current) => current ? {
-                      ...current,
-                      tickets: { ...current.tickets, alineacion_titulo: e.target.value as "IZQUIERDA" | "CENTRO" | "DERECHA" }
-                    } : null);
-                    setMessage(null);
-                  }}
-                  className="w-full px-3 py-2.5 bg-black/35 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-blue-400/70"
-                >
-                  <option value="IZQUIERDA">Izquierda</option>
-                  <option value="CENTRO">Centrada</option>
-                  <option value="DERECHA">Derecha</option>
-                </select>
+                <p className="text-[10px] text-zinc-500">Selecciona el diseño del comprobante que se generará en formato PDF.</p>
               </div>
             </div>
 

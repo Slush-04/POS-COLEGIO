@@ -744,7 +744,9 @@ def obtener_historial_transacciones():
                 o.fecha_registro,
                 o.fecha_anulacion,
                 o.motivo_anulacion,
+                o.id_cliente,
                 cl.nombre AS nombre_cliente,
+                cl.rfc AS rfc_cliente,
                 (
                     SELECT GROUP_CONCAT(DISTINCT od.descripcion)
                     FROM operacion_detalles od
@@ -833,6 +835,8 @@ def obtener_historial_transacciones():
                 ),
                 "status": operacion["estado"],
                 "cancellationReason": operacion["motivo_anulacion"] or "",
+                "idCliente": operacion["id_cliente"],
+                "rfcCliente": operacion["rfc_cliente"],
             })
 
         # Los movimientos anteriores al paso 8 no tienen id_operacion. Se

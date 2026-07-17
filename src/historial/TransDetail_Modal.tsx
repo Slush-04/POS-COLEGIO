@@ -34,6 +34,8 @@ interface Transaction {
     observation: string;
     status: string;
     cancellationReason?: string;
+    idCliente?: number | null;
+    rfcCliente?: string | null;
 }
 
 interface OperationDetail {
