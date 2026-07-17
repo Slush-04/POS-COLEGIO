@@ -1,0 +1,118 @@
+I will update the task list to reflect the template-based implementation and verification expectations.
+
+Edited task.md
+
+I will inspect the database definition and migration sections in [database.py](file:///c:/Users/CCP%20Servicio/Documents/EDUARDO_NAH/POS-COLEGIO/backend/database.py) using `view_file` to locate the exact lines to modify.
+
+Viewed database.py:309-378
+
+I will modify [database.py](file:///c:/Users/CCP%20Servicio/Documents/EDUARDO_NAH/POS-COLEGIO/backend/database.py) using the `multi_replace_file_content` tool to add the `plantilla` column to both the schema definition and the auto-migration block.
+
+Edited database.py
+
+I will run database.py to verify that the database update goes through.
+
+Ran command: `python database.py`
+
+I will update [configuracion.py](file:///c:/Users/CCP%20Servicio/Documents/EDUARDO_NAH/POS-COLEGIO/backend/routers/configuracion.py) to read and save the `plantilla` property from the front-end requests.
+
+Edited configuracion.py
+
+I will modify [pagos.py](file:///c:/Users/CCP%20Servicio/Documents/EDUARDO_NAH/POS-COLEGIO/backend/routers/pagos.py) to select and return `id_cliente` and `rfc_cliente` in the transactions history.
+
+Edited pagos.py
+
+I will view [OperationFolioSettings.tsx](file:///c:/Users/CCP%20Servicio/Documents/EDUARDO_NAH/POS-COLEGIO/src/components/settings/OperationFolioSettings.tsx) using `view_file` to find the exact target lines around the ticket options for replacement.
+
+Viewed OperationFolioSettings.tsx:240-325
+
+I will edit [OperationFolioSettings.tsx](file:///c:/Users/CCP%20Servicio/Documents/EDUARDO_NAH/POS-COLEGIO/src/components/settings/OperationFolioSettings.tsx) to replace the alignment configuration controls with the single template selection dropdown.
+
+Edited OperationFolioSettings.tsx
+
+I will read [TransDetail_Modal.tsx](file:///c:/Users/CCP%20Servicio/Documents/EDUARDO_NAH/POS-COLEGIO/src/historial/TransDetail_Modal.tsx) (lines 20 to 45) to locate the `Transaction` interface and make the replacement.
+
+Viewed TransDetail_Modal.tsx:20-45
+
+I will update [TransDetail_Modal.tsx](file:///c:/Users/CCP%20Servicio/Documents/EDUARDO_NAH/POS-COLEGIO/src/historial/TransDetail_Modal.tsx) to declare the `idCliente` and `rfcCliente` fields in the `Transaction` interface.
+
+Edited TransDetail_Modal.tsx
+
+I will overwrite the [ticketPdf.ts](file:///c:/Users/CCP%20Servicio/Documents/EDUARDO_NAH/POS-COLEGIO/src/historial/ticketPdf.ts) file using the `write_to_file` tool to support both `PLANTILLA_1` and `PLANTILLA_2`. The generator will now inspect the active template and output either the classic metadata alignment or the centered logo-based layout.
+
+Edited ticketPdf.ts
+
+I will run a TypeScript build check using type-only checking to make sure our modifications compile without errors.
+
+Ran command: `npx tsc --noEmit`
+
+I will now update [task.md](file:///C:/Users/CCP%20Servicio/.gemini/antigravity-ide/brain/c71945eb-6513-411d-bcfa-4b7516a0159c/task.md) to mark all code work as completed.
+
+Edited task.md
+
+I will create the [walkthrough.md](file:///C:/Users/CCP%20Servicio/.gemini/antigravity-ide/brain/c71945eb-6513-411d-bcfa-4b7516a0159c/walkthrough.md) artifact, which describes in detail all the changes implemented and outlines in plain text exactly what results you should expect when verifying the app manually.
+
+Edited walkthrough.md
+
+I will update [task.md](file:///C:/Users/CCP%20Servicio/.gemini/antigravity-ide/brain/c71945eb-6513-411d-bcfa-4b7516a0159c/task.md) to mark the verification documentation task as completed.
+
+I will update [task.md](file:///C:/Users/CCP%20Servicio/.gemini/antigravity-ide/brain/c71945eb-6513-411d-bcfa-4b7516a0159c/task.md) with the correct artifact directory path.
+
+Edited task.md
+
+He completado la implementación del sistema de plantillas en la base de datos, el panel de configuración de React y en el generador de PDF. 
+
+Tal como me solicitaste, he dejado de lado la ejecución de pruebas del navegador y he preparado una guía detallada en texto plano para que puedas probarlo tú mismo.
+
+---
+
+### Resumen de los Cambios Implementados
+
+1. **Base de Datos y Backend (Python / FastAPI):**
+   * **Migración:** Agregamos la columna `plantilla` a la tabla `configuracion_tickets` en [database.py](file:///c:/Users/CCP%20Servicio/Documents/EDUARDO_NAH/POS-COLEGIO/backend/database.py) con soporte para autogestionarse al iniciar el backend.
+   * **Rutas:** Modificamos los endpoints en [configuracion.py](file:///c:/Users/CCP%20Servicio/Documents/EDUARDO_NAH/POS-COLEGIO/backend/routers/configuracion.py) para que guarden y sirvan la plantilla activa (`"PLANTILLA_1"` o `"PLANTILLA_2"`).
+   * **Historial de Operaciones:** Modificamos el endpoint `/historial` en [pagos.py](file:///c:/Users/CCP%20Servicio/Documents/EDUARDO_NAH/POS-COLEGIO/backend/routers/pagos.py) para que asocie el ID y RFC del cliente (`cl.rfc`) a la transacción para pasárselos al PDF.
+
+2. **Ajustes y Modal de Historial (React Frontend):**
+   * **Selector:** Reemplazamos los campos individuales de alineación en [OperationFolioSettings.tsx](file:///c:/Users/CCP%20Servicio/Documents/EDUARDO_NAH/POS-COLEGIO/src/components/settings/OperationFolioSettings.tsx) por una sola caja de selección para la plantilla activa.
+   * **Modal:** Actualizamos la definición de la interfaz en [TransDetail_Modal.tsx](file:///c:/Users/CCP%20Servicio/Documents/EDUARDO_NAH/POS-COLEGIO/src/historial/TransDetail_Modal.tsx) para capturar el ID y RFC del cliente.
+
+3. **Bifurcación de Plantillas en PDF:**
+   * En [ticketPdf.ts](file:///c:/Users/CCP%20Servicio/Documents/EDUARDO_NAH/POS-COLEGIO/src/historial/ticketPdf.ts) la generación del PDF se divide según la plantilla configurada en tu base de datos:
+     * **Plantilla 1 (Clásica):** Muestra el emisor arriba a la derecha, pero conserva la separación de fecha/hora, agrupación de pagos, observaciones manuales dentro del cuadro estilizado y el desglose de totales.
+     * **Plantilla 2 (Moderna):** Es el diseño que me anexaste en la captura de pantalla: cabecera y pie de página centrados, recuadro de logotipo gris a la izquierda, detalles de folio/fecha/hora a la derecha, detalles de movimiento incluyendo número de cliente y RFC (si el cliente tiene asignado un RFC, de lo contrario se deja en blanco), línea divisoria punteada azul y todos los datos del emisor centrados al fondo.
+
+---
+
+### Resultados Esperados de tus Pruebas Manuales (Texto Plano)
+
+Para verificarlo, puedes realizar las siguientes dos pruebas de comportamiento en tu navegador:
+
+#### Caso de Prueba 1: Guardado de Configuración
+1. Ve a **Configuración** -> Pestaña **Operación y Folios** -> Sección **Tickets y recibos**.
+2. Cambia el desplegable de **Plantilla del Ticket PDF** a "Plantilla 2: Diseño Moderno (Emisor centrado abajo)".
+3. Presiona el botón **Guardar** en la cabecera.
+4. **Resultado Esperado:** Al recargar la página o cambiar de pestaña y regresar, la selección debe conservarse de forma persistente en **Plantilla 2**.
+
+#### Caso de Prueba 2: Generar PDF con Plantilla 1
+1. Selecciona la **Plantilla 1** en configuración y guarda.
+2. Ve al **Historial**, abre cualquier transacción y presiona **Descargar ticket PDF**.
+3. **Resultado Esperado:** El PDF debe descargarse mostrando los datos del emisor arriba a la derecha. Debe tener:
+   * La fecha y hora en renglones separados.
+   * Un recuadro titulado `OBSERVACIONES` con los comentarios manuales que hayas ingresado en la venta (si está vacío, el cuadro no se dibuja).
+   * Un desglose de totales alineado a la derecha que liste: `Importe`, `Descuento`, `IVA (16%)` y `Total a Pagar`.
+   * Los métodos de pago consolidados sin filas repetidas (por ejemplo, si pagaste con dos conceptos de efectivo, mostrará una única línea `EFECTIVO: $Total`).
+
+#### Caso de Prueba 3: Generar PDF con Plantilla 2 (Captura Anexada)
+1. Cambia a **Plantilla 2** en configuración y guarda.
+2. Ve al **Historial** y descarga el ticket de una venta.
+3. **Resultado Esperado:** El PDF descargado debe mostrar una apariencia idéntica a la captura de pantalla que nos anexaste:
+   * La cabecera azul centrada.
+   * El rectángulo gris **"Logo de tu empresa"** a la izquierda.
+   * El Folio, Fecha y Hora alineados a la derecha.
+   * En los detalles de movimiento: `Numero de cliente: [ID]` (o vacío si es venta general), `Cliente`, `Tipo`, y `RFC` (vacío si no tiene RFC asignado o es venta general, respetando la estructura `RFC:    `).
+   * Abajo de las observaciones, se dibujará una **línea azul punteada de separación**.
+   * Debajo de la línea punteada, los **Datos del Emisor** aparecerán centrados fila por fila, con el nombre institucional en negrita.
+   * El pie de página administrativo aparecerá centrado en la parte inferior.
+
+Puedes ver el resumen formal de las tareas en el artefacto [task.md](file:///C:/Users/CCP%20Servicio/.gemini/antigravity-ide/brain/c71945eb-6513-411d-bcfa-4b7516a0159c/task.md) y la bitácora en [walkthrough.md](file:///C:/Users/CCP%20Servicio/.gemini/antigravity-ide/brain/c71945eb-6513-411d-bcfa-4b7516a0159c/walkthrough.md).
