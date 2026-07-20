@@ -25,6 +25,8 @@ Se divide en DOS columnas principales:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Frontend:
   src/components/POSView.tsx          → Interfaz gráfica del POS y lógica de carrito.
+  src/components/ModalCobroPOS.tsx    → Modal para finalizar cobros (efectivo, tarjeta, transferencia, etc.).
+  src/components/ModalCompraPOS.tsx   → Modal para registrar egresos/compras directas desde el POS.
 
 Backend:
   backend/routers/pos.py              → Lógica de checkout y procesamiento del carrito.

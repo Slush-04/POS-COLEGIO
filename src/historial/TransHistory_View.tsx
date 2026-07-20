@@ -95,7 +95,7 @@ export function TransactionHistoryView() {
             </div>
 
             {/* Filters and Search */}
-            <div className="bg-zinc-900/30 p-5 rounded-custom border border-border-table">
+            <div className="bg-white/[0.045] backdrop-blur-xl border border-white/12 p-5 rounded-custom shadow-[0_16px_45px_rgba(0,0,0,0.22)]">
                 <div className="flex flex-col md:flex-row gap-4 items-end">
                     <div className="space-y-1.5 flex-1 min-w-[200px]">
                         <label className="text-xs font-medium text-zinc-400">Buscar Transacción</label>
@@ -173,7 +173,7 @@ export function TransactionHistoryView() {
             </div>
 
             {/* Transactions Table */}
-            <div className="bg-zinc-900/30 rounded-custom border border-border-table overflow-hidden shadow-sm">
+            <div className="bg-white/[0.045] backdrop-blur-xl border border-white/12 rounded-custom overflow-hidden shadow-[0_16px_45px_rgba(0,0,0,0.22)]">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
                         <thead className="text-xs text-zinc-400 bg-black/40 border-b border-border-table uppercase tracking-wider">

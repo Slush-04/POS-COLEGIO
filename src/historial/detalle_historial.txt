@@ -5,18 +5,18 @@ Este directorio contiene los componentes para consultar, filtrar y ver el detall
 ======================
 1. ESTRUCTURA DE ARCHIVOS
 ======================
-- TransactionHistoryView.tsx: Es el panel principal de historial de transacciones. Reemplaza o se abre desde el Dashboard. Muestra una tabla con todas las transacciones, un campo de búsqueda y un filtro por tipo de movimiento.
-- TransactionDetailModal.tsx: Es un modal que se abre para mostrar los detalles completos de una sola transacción de forma aislada y estructurada.
+- TransHistory_View.tsx: Es el panel principal de historial de transacciones. Reemplaza o se abre desde el Dashboard. Muestra una tabla con todas las transacciones, un campo de búsqueda y un filtro por tipo de movimiento.
+- TransDetail_Modal.tsx: Es un modal que se abre para mostrar los detalles completos de una sola transacción de forma aislada y estructurada.
 
 ======================
 2. LÓGICA DE FUNCIONAMIENTO (Dashboard a Historial)
 ======================
 - En el "DashboardView", al hacer clic en el botón "Ver Todo" (ubicado en el recuadro de Movimientos Recientes), se dispara el evento `onNavigate('transactions')`.
 - En "App.tsx", el estado `currentView` cambia a 'transactions'.
-- El componente `App` renderiza `<TransactionHistoryView />`.
+- El componente `App` renderiza `<TransHistory_View />`.
 
 ======================
-3. LÓGICA DEL HISTORIAL Y DETALLES (TransactionHistoryView)
+3. LÓGICA DEL HISTORIAL Y DETALLES (TransHistory_View)
 ======================
 Filtros:
 - Búsqueda (Search): Permite buscar transacciones por nombre de Cliente, Serie/Folio o Tipo de transacción.
@@ -30,10 +30,10 @@ Tabla de Resultados:
 Apertura de Detalle (Doble Clic):
 - Cada fila (<tr>) de la tabla contiene el evento `onDoubleClick={() => setSelectedTransaction(trx)}`.
 - Al hacer doble clic en una fila, el estado `selectedTransaction` guarda el objeto de la transacción respectiva.
-- Como `selectedTransaction` ya no es nulo, el modal `<TransactionDetailModal />` pasa a tener `isOpen={true}` y se muestra en pantalla.
+- Como `selectedTransaction` ya no es nulo, el modal `<TransDetail_Modal />` pasa a tener `isOpen={true}` y se muestra en pantalla.
 
 ======================
-4. LÓGICA DEL MODAL DE DETALLE (TransactionDetailModal)
+4. LÓGICA DEL MODAL DE DETALLE (TransDetail_Modal)
 ======================
 - Recibe la transacción a través de las "props".
 - Estructura y desglosa: 
@@ -53,3 +53,28 @@ Apertura de Detalle (Doble Clic):
 - `TicketPdfOptions` define el punto de integración para los futuros parámetros de Configuración > Operación y Folios > Tickets y recibos.
 - Por ahora se usan valores institucionales predeterminados. Los parámetros de identidad, contenido, tamaño y pie se definirán en una etapa posterior.
 - Los tickets de operaciones anuladas conservan el importe original, muestran su estado y agregan el motivo de anulación.
+
+======================
+6. PLANTILLAS DE COMPROBANTES (PDF)
+======================
+Actualmente hay 5 plantillas disponibles que se seleccionan desde Configuración > Operación y Folios > Tickets y recibos:
+
+  - PLANTILLA_1: Diseño Clásico (emisor arriba a la derecha, tabla estándar)
+  - PLANTILLA_2: Diseño Moderno (emisor centrado abajo, barra azul superior)
+  - PLANTILLA_3: Diseño Ejecutivo (encabezado compacto, líneas finas, elegante)
+  - PLANTILLA_4: Comprobante Formal (Encabezado institucional, ficha de operación y datos fiscales al pie)
+  - PLANTILLA_5: Diseño Ticket (Estilo comprobante de caja, compacto)
+
+Cada plantilla se genera como PDF nativo desde `ticketPdf.ts`. No se requiere subir archivos externos. Para personalizar:
+
+  1. Editar `ticketPdf.ts` en la función `downloadTicketPdf()`.
+  2. Cada bloque se identifica por `if (activeTemplate === "PLANTILLA_X")`.
+  3. Usar las funciones auxiliares: drawText, drawTextAligned, drawRect, drawLine, drawDottedLine.
+  4. Coordenadas: Y empieza en 740 (arriba) y decrece. Página: 612 x 792 pts.
+  5. Después de editar, seleccionar la plantilla desde Configuración > Tickets y descargar un PDF para validar.
+
+Para agregar una plantilla completamente nueva:
+  1. Agregar "PLANTILLA_6" al tipo `ComprobanteConfig` en `ticketPdf.ts`.
+  2. Agregar el bloque `if (activeTemplate === "PLANTILLA_6")` con el diseño deseado.
+  3. Agregar la opción en `OperationFolioSettings.tsx` en el `<select>` de plantillas.
+  4. No se requieren cambios en el backend (el campo `plantilla` es texto libre).

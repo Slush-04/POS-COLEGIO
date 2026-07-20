@@ -17,7 +17,9 @@ del sistema.
 * Carga Inicial al Registrarse:
   Cuando se registra un cliente nuevo cuyo tipo es 'asociado' y su
   estatus operativo es 'Activo', el sistema le genera y carga
-  automáticamente la cuota mensual de $500.00 correspondiente al
+  automáticamente la cuota mensual (según la tarifa configurada en el
+  catálogo del inventario para el servicio "Cuota mensual", tomando $500.00
+  por defecto si no se encuentra registrado) correspondiente al
   mes actual en curso (por ejemplo, si se registra en Julio,
   se le carga la cuota de Julio de inmediato en su cuenta).
 
@@ -27,7 +29,8 @@ del sistema.
 El sistema gestiona dos tipos de cuotas periódicas:
 
 A. CUOTA MENSUAL
-   * Costo estándar: $500.00 MXN.
+   * Costo estándar: Configurado dinámicamente en el Catálogo de Inventario
+     (Bajo la categoría 'Cuotas', servicio "Cuota mensual"; por defecto $500.00 MXN).
    * Frecuencia: Mensual. Se genera al inicio del mes correspondiente.
    * Estados posibles de pago:
      - 'PENDIENTE': Aún tiene saldo pendiente por pagar.
@@ -143,9 +146,9 @@ HISTORIAL DE MODIFICACIONES Y CONTROL DE CAMBIOS
   convertir strings vacíos de RFC/CURP a valores `None` (NULL) en SQLite 
   y prevenir colisiones de la restricción `UNIQUE`.
 - [Regla - Alta con Cargo Inicial]: Modificado en `clientes.py` para 
-  que al registrar un cliente de tipo 'asociado' y estatus 'Activo', 
-  se le asigne de forma inmediata la cuota mensual de $500.00 del mes 
-  en curso.
+   que al registrar un cliente de tipo 'asociado' y estatus 'Activo', 
+   se le asigne de forma inmediata la cuota mensual configurada en el
+   catálogo (o $500.00 por defecto) del mes en curso.
 - [Rediseño - Proyección del Mes en Dashboard]:
   * Backend (`cuotas.py`): Se calcula la meta/proyección del mes sumando 
     el monto de las cuotas de tipo 'Mensual' que pertenezcan al mes y 

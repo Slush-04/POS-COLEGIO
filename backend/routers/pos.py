@@ -52,12 +52,17 @@ def _obtener_cliente(cursor, id_cliente: Optional[int]):
         return None
 
     cursor.execute(
-        "SELECT id_cliente, nombre, tipo_cliente FROM clientes WHERE id_cliente = ? AND estatus = 1",
+        "SELECT id_cliente, nombre, tipo_cliente, estatus_operativo FROM clientes WHERE id_cliente = ? AND estatus = 1",
         (id_cliente,)
     )
     cliente = cursor.fetchone()
     if not cliente:
-        raise HTTPException(status_code=404, detail="Cliente no encontrado o inactivo.")
+        raise HTTPException(status_code=404, detail="Cliente no encontrado.")
+    if cliente["estatus_operativo"] != "Activo":
+        raise HTTPException(
+            status_code=400,
+            detail=f"El cliente '{cliente['nombre']}' se encuentra inactivo y no puede realizar transacciones en el POS."
+        )
     return cliente
 
 

@@ -83,6 +83,7 @@ export function ClientsView() {
 
   // --- NUEVO: Control de la tabla de clientes ---
   const [listaClientes, setListaClientes] = useState<Client[]>([]);
+  const [sectores, setSectores] = useState<Array<{ id: number; nombre: string }>>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [clienteSeleccionado, setClienteSeleccionado] = useState<Client | null>(null);
   const [paginaActual, setPaginaActual] = useState(1);
@@ -170,9 +171,20 @@ export function ClientsView() {
     }
   };
 
+  const cargarSectores = async () => {
+    try {
+      const respuesta = await fetch("http://127.0.0.1:8000/api/configuracion/sectores");
+      const datos = await respuesta.json();
+      setSectores(datos);
+    } catch (error) {
+      console.error("Error al cargar los sectores:", error);
+    }
+  };
+
   // Esto hace que los clientes se cargen automáticamente al abrir la pantalla
   useEffect(() => {
     cargarClientes();
+    cargarSectores();
   }, []);
 
   // 2. MANEJADOR DE CAPTURA DE DATOS
@@ -390,9 +402,19 @@ export function ClientsView() {
                       onChange={handleChange}
                       className="w-full px-3 py-2 bg-zinc-900/50 border border-border-table rounded-md text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none"
                     >
-                      <option value="Normal" className="bg-zinc-900">Normal</option>
-                      <option value="Gubernamental" className="bg-zinc-900">Gubernamental</option>
-                      <option value="Capacitadoras" className="bg-zinc-900">Capacitadoras</option>
+                      {sectores.length > 0 ? (
+                        sectores.map((sec) => (
+                          <option key={sec.id} value={sec.nombre} className="bg-zinc-900">
+                            {sec.nombre}
+                          </option>
+                        ))
+                      ) : (
+                        <>
+                          <option value="Normal" className="bg-zinc-900">Normal</option>
+                          <option value="Gubernamental" className="bg-zinc-900">Gubernamental</option>
+                          <option value="Capacitadoras" className="bg-zinc-900">Capacitadoras</option>
+                        </>
+                      )}
                     </select>
                     <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-zinc-500">
                       <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" fillRule="evenodd"></path></svg>

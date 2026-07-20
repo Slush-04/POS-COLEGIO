@@ -110,18 +110,27 @@ def obtener_clientes():
 
 
 @router.get("/buscar")
-def buscar_clientes(q: str = ""):
+def buscar_clientes(q: str = "", include_inactive: bool = False):
     conexion = get_db_connection()
     try:
         conexion.row_factory = sqlite3.Row
         cursor = conexion.cursor()
         query = f"%{q}%"
-        cursor.execute('''
-            SELECT * FROM clientes 
-            WHERE nombre LIKE ? OR rfc LIKE ? OR telefono LIKE ?
-            ORDER BY nombre ASC
-            LIMIT 20
-        ''', (query, query, query))
+        if include_inactive:
+            cursor.execute('''
+                SELECT * FROM clientes 
+                WHERE nombre LIKE ? OR rfc LIKE ? OR telefono LIKE ?
+                ORDER BY nombre ASC
+                LIMIT 20
+            ''', (query, query, query))
+        else:
+            cursor.execute('''
+                SELECT * FROM clientes 
+                WHERE (nombre LIKE ? OR rfc LIKE ? OR telefono LIKE ?)
+                  AND estatus_operativo = 'Activo'
+                ORDER BY nombre ASC
+                LIMIT 20
+            ''', (query, query, query))
         clientes = [dict(row) for row in cursor.fetchall()]
         return clientes
     except Exception as e:

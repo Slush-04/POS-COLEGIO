@@ -1,0 +1,374 @@
+INDICACIONES PARA MEJORAR LA NOTA DE VENTA PDF DEL POS
+=========================================================
+
+Objetivo:
+Mejorar la plantilla PDF de la nota de venta / comprobante de operación, conservando lo que ya existe actualmente, pero reorganizando la información y agregando datos importantes para que el comprobante se vea más profesional, claro y configurable.
+
+El PDF actual ya contiene:
+- Nombre del negocio/institución.
+- Logo de empresa como referencia.
+- Folio.
+- Fecha.
+- Hora.
+- Título “Comprobante de Operación”.
+- Detalles del movimiento.
+- Número de cliente.
+- Cliente.
+- Tipo de operación.
+- RFC del cliente.
+- Tabla de productos con descripción, cantidad, precio unitario e importe.
+- Importe/subtotal.
+- Descuento.
+- IVA.
+- Total a pagar.
+- Métodos de pago.
+- Estado.
+- Observaciones.
+- Datos del colegio al final.
+
+
+CAMBIOS A IMPLEMENTAR
+=====================
+
+1. AGREGAR LEYENDA LEGAL CLARA
+------------------------------
+
+Ubicación:
+La leyenda debe colocarse en la parte inferior del PDF, antes del pie de página final.
+
+Texto sugerido:
+“Este documento es una nota de venta / comprobante administrativo. No es un CFDI. Para efectos fiscales, solicite su factura correspondiente.”
+
+Comportamiento:
+Esta leyenda debe mostrarse siempre en la nota de venta.
+
+Configuración:
+El texto debe poder modificarse desde configuración del sistema, pero debe existir un texto predeterminado si el usuario no lo personaliza.
+
+
+2. MOVER Y COMPLETAR LOS DATOS DEL EMISOR EN LA PARTE SUPERIOR
+--------------------------------------------------------------
+
+Actualmente algunos datos del emisor aparecen al final del PDF. Se deben mover al encabezado principal, junto al logo, para que el comprobante se vea más profesional y completo desde el inicio.
+
+Ubicación:
+Parte superior izquierda del PDF.
+
+Datos que debe mostrar el emisor:
+- Logo.
+- Nombre comercial.
+- Razón social.
+- RFC.
+- Régimen fiscal.
+- Dirección.
+- Código postal.
+- Teléfono.
+- Correo.
+
+Distribución recomendada:
+
+Izquierda:
+- Logo.
+- Nombre comercial.
+- Razón social.
+- RFC.
+- Régimen fiscal.
+- Dirección.
+- Código postal.
+- Teléfono.
+- Correo.
+
+Derecha:
+- Comprobante de Operación.
+- Folio.
+- Fecha.
+- Hora.
+- Estado.
+
+Configuración:
+Estos datos sí deben ser modificables desde configuración del sistema:
+- Logo.
+- Nombre comercial.
+- Razón social.
+- RFC.
+- Régimen fiscal.
+- Dirección.
+- Código postal.
+- Teléfono.
+- Correo.
+
+Dato fijo:
+El acomodo visual de estos campos puede quedar fijo por ahora.
+El usuario podrá cambiar los datos, pero no cambiar la estructura o diseño del encabezado en esta etapa.
+
+
+3. MEJORAR LA SECCIÓN DE DATOS DEL CLIENTE
+------------------------------------------
+
+Actualmente el PDF ya muestra:
+- Número de cliente.
+- Cliente.
+- Tipo.
+- RFC.
+
+Se debe reorganizar esta información en una sección clara llamada “Datos del cliente”.
+
+Ubicación:
+Debajo del encabezado principal y antes de la tabla de productos o detalles del movimiento.
+
+Datos que debe mostrar:
+- Tipo de cliente.
+- Número de cliente.
+- Nombre.
+- RFC.
+
+Ejemplo:
+
+Datos del cliente
+Tipo de cliente: Alumno / Cliente general / Empresa
+Número de cliente: 8492
+Nombre: Edwin Armando Chan Cahuich
+RFC: CACE950412XX3
+
+Configuración:
+El nombre de los campos debe quedar fijo por ahora.
+Los datos se llenarán automáticamente desde la venta o desde el registro del cliente.
+
+Dato modificable:
+El “tipo de cliente” debe venir desde el cliente registrado o desde la operación.
+
+Ejemplos de tipo de cliente:
+- Asociado.
+- Estudiante.
+- Publico General.
+- Asociado Externo.
+- Colaborador.
+
+Dato fijo:
+La sección “Datos del cliente” siempre debe aparecer, aunque algunos campos estén vacíos.
+
+Si un dato no existe, mostrar:
+“N/A”
+
+Ejemplo:
+RFC: N/A
+
+
+4. CONSERVAR LA SECCIÓN DE DETALLES DEL MOVIMIENTO
+--------------------------------------------------
+
+La sección actual “Detalles del movimiento” puede mantenerse, pero debe evitar repetir datos que ya estarán en “Datos del cliente”.
+
+Debe enfocarse en la operación:
+- Tipo de operación.
+- Estado.
+
+Como folio, fecha, hora y estado estarán en el encabezado, dentro de detalles del movimiento solo debe quedarse lo necesario.
+
+Recomendación:
+Mantener únicamente:
+- Tipo de operación: Venta.
+- Estado: Completado.
+
+También se puede eliminar esta sección si queda repetida visualmente, pero para esta etapa se recomienda conservarla de forma más limpia.
+
+
+5. MANTENER LA TABLA DE PRODUCTOS ACTUAL
+----------------------------------------
+
+La tabla actual ya contiene:
+- Descripción.
+- Cantidad.
+- Precio unitario.
+- Importe.
+
+Por ahora se debe conservar así para no complicar el cambio.
+
+Ubicación:
+Después de los datos del cliente y detalles del movimiento.
+
+Dato fijo:
+La estructura de columnas se queda igual en esta etapa.
+
+Dato dinámico:
+Los productos, cantidades, precios e importes se llenan desde la venta.
+
+
+6. MANTENER EL RESUMEN DE IMPORTES ACTUAL
+-----------------------------------------
+
+El PDF ya muestra:
+- Importe.
+- Descuento.
+- IVA.
+- Total a pagar.
+
+Se debe conservar.
+
+Ubicación:
+Debajo de la tabla de productos, alineado preferentemente a la derecha.
+
+Dato dinámico:
+Estos importes deben venir de la venta calculada en backend.
+
+Dato fijo:
+Los nombres de los campos se mantienen igual por ahora.
+
+
+7. MANTENER MÉTODOS DE PAGO
+---------------------------
+
+El PDF ya muestra la sección “Método(s) de pago”.
+
+Se debe conservar.
+
+Ubicación:
+Debajo del resumen de importes.
+
+Dato dinámico:
+Debe mostrar los métodos usados en la venta:
+- Efectivo.
+- Tarjeta.
+- Transferencia.
+- Cargar a cuenta.
+- Pago mixto, si aplica.
+
+Dato fijo:
+El título “Método(s) de pago” se mantiene fijo.
+
+
+8. MANTENER OBSERVACIONES
+-------------------------
+
+El PDF ya tiene sección de observaciones.
+
+Se debe conservar.
+
+Ubicación:
+Debajo de métodos de pago.
+
+Dato dinámico:
+Debe venir desde la venta.
+
+Si no hay observaciones, mostrar:
+“Sin observaciones.”
+
+
+9. AGREGAR MENSAJE FINAL CONFIGURABLE
+-------------------------------------
+
+Ubicación:
+Al final del PDF, después de la leyenda legal o dentro del pie de página.
+
+Texto predeterminado sugerido:
+“Gracias por su compra. Conserve este comprobante para cualquier aclaración.”
+
+Configuración:
+Este texto debe poder modificarse desde configuración del sistema.
+
+Ejemplos de mensajes configurables:
+- “Gracias por su compra.”
+- “Conserve este comprobante para cualquier aclaración.”
+- “No se aceptan devoluciones sin comprobante.”
+- “Documento generado automáticamente por el sistema POS.”
+
+
+QUÉ SE PUEDE MODIFICAR DESDE CONFIGURACIÓN
+==========================================
+
+Crear o usar una sección de configuración del negocio para modificar los datos que aparecerán en el PDF.
+
+Datos modificables:
+- Logo.
+- Nombre comercial.
+- Razón social.
+- RFC del emisor.
+- Régimen fiscal.
+- Dirección.
+- Código postal.
+- Teléfono.
+- Correo.
+- Leyenda legal del comprobante.
+- Mensaje final.
+- Mostrar u ocultar observaciones.
+- Mostrar u ocultar RFC del cliente.
+- Mostrar u ocultar logo.
+
+
+QUÉ SE QUEDA FIJO POR AHORA
+===========================
+
+Para esta etapa, estos elementos deben quedarse fijos:
+
+- Estructura general del PDF.
+- Ubicación del encabezado.
+- Ubicación de los datos del cliente.
+- Título principal “Comprobante de Operación” o “Nota de Venta”.
+- Tabla de productos.
+- Columnas de la tabla:
+  - Descripción.
+  - Cantidad.
+  - Precio unitario.
+  - Importe.
+- Resumen de importes:
+  - Importe.
+  - Descuento.
+  - IVA.
+  - Total a pagar.
+- Sección de métodos de pago.
+- Sección de observaciones.
+- Estado de la operación.
+- Folio, fecha y hora generados automáticamente.
+
+
+ESTRUCTURA FINAL ESPERADA DEL PDF
+=================================
+
+El nuevo PDF debe quedar ordenado así:
+
+1. Encabezado principal
+   - Logo.
+   - Datos completos del emisor.
+   - Título del documento.
+   - Folio.
+   - Fecha.
+   - Hora.
+   - Estado.
+
+2. Datos del cliente
+   - Tipo de cliente.
+   - Número de cliente.
+   - Nombre.
+   - RFC.
+
+3. Detalles de la operación
+   - Tipo de operación.
+   - Estado.
+
+4. Tabla de productos / servicios
+   - Descripción.
+   - Cantidad.
+   - Precio unitario.
+   - Importe.
+
+5. Resumen de importes
+   - Importe.
+   - Descuento.
+   - IVA.
+   - Total a pagar.
+
+6. Método(s) de pago
+   - Método usado.
+   - Monto pagado por método.
+
+7. Observaciones
+   - Observaciones de la venta o “Sin observaciones.”
+
+8. Leyenda legal
+   - Texto indicando que es una nota de venta / comprobante administrativo y no un CFDI.
+
+9. Mensaje final configurable
+   - Mensaje personalizado del negocio.
+
+Objetivo final:
+El PDF debe verse más profesional, evitar duplicar información, mostrar los datos completos del emisor desde el inicio y permitir que los datos principales del negocio se puedan modificar desde configuración sin tener que editar el código de la plantilla.

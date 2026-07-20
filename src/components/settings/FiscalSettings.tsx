@@ -96,7 +96,7 @@ export const FiscalSettings = forwardRef<FiscalSettingsHandle>(function FiscalSe
       <section className="bg-zinc-900/30 border border-border-table rounded-custom p-6">
         <h2 className="text-lg font-bold text-white mb-6">Datos de Facturación</h2>
         <div className="space-y-4">
-          <Field label="Razón Social">
+          <Field label="Nombre Comercial / Razón Social">
             <input
               type="text"
               value={data.razon_social}

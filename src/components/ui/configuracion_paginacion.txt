@@ -6,16 +6,17 @@ Este documento explica cómo personalizar la paginación y cómo adaptarla
 fácilmente a cualquier otra tabla o vista del sistema.
 
 ------------------------------------------------------------------------
-1. CÓMO MODIFICAR LAS CONFIGURACIONES (10, 15, 20, 50, 100, ETC.)
+1. CÓMO MODIFICAR LAS CONFIGURACIONES
 ------------------------------------------------------------------------
 Toda la configuración centralizada se encuentra en el archivo:
 `src/components/ui/configuracion.ts`
 
 Si deseas cambiar las opciones de visualización o los valores por defecto:
 1. Abre `src/components/ui/configuracion.ts`.
-2. Modifica el campo `defaultLimit` para cambiar la cantidad inicial de filas.
-3. Agrega o remueve números en la lista `availableLimits` (por ejemplo, `[5, 10, 15, 20, 30]`).
-4. Si necesitas cambiar los textos de la paginación (inglés u otro idioma), edita el objeto `labels`.
+2. Modifica el campo `defaultLimit` para cambiar la cantidad fija de filas por página (por defecto es 15).
+3. Si necesitas cambiar los textos de la paginación (inglés u otro idioma), edita el objeto `labels`.
+
+*Nota:* El selector dinámico de filas por página fue removido para simplificar la interfaz. El número de filas por página está fijo globalmente según `defaultLimit`.
 
 ------------------------------------------------------------------------
 2. CÓMO IMPLEMENTAR ESTA PAGINACIÓN EN OTRAS TABLAS (CLIENT-SIDE)
@@ -31,13 +32,12 @@ import { Paginacion } from "../ui/Paginacion"; // Ajusta la ruta relativa
 import { PAGINATION_CONFIG } from "../ui/configuracion"; // Ajusta la ruta relativa
 ```
 
-PASO B: Declarar los estados de paginación
-------------------------------------------
-Dentro de tu componente React, define los estados de la página actual y
-el límite de filas a mostrar por página usando los valores globales:
+PASO B: Declarar el estado de la página actual
+----------------------------------------------
+Dentro de tu componente React, define el estado de la página actual. La cantidad de items se toma del límite por defecto de la configuración global:
 ```typescript
 const [currentPage, setCurrentPage] = useState(1);
-const [itemsPerPage, setItemsPerPage] = useState(PAGINATION_CONFIG.defaultLimit);
+const itemsPerPage = PAGINATION_CONFIG.defaultLimit;
 ```
 
 PASO C: Resetear la página al filtrar o buscar
@@ -75,10 +75,6 @@ remueve los controles de paginación viejos y escribe:
   itemsPerPage={itemsPerPage}
   isLoading={false}
   onPageChange={(nuevaPagina) => setCurrentPage(nuevaPagina)}
-  onItemsPerPageChange={(nuevoLimite) => {
-    setItemsPerPage(nuevoLimite);
-    setCurrentPage(1); // Regresar a la página 1 al cambiar el límite
-  }}
 />
 ```
 

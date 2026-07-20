@@ -125,6 +125,11 @@ class TicketSettingsModel(BaseModel):
     alineacion_emisor: str = "IZQUIERDA"
     alineacion_titulo: str = "IZQUIERDA"
     plantilla: str = "PLANTILLA_1"
+    leyenda_legal: str = "Este documento es una nota de venta / comprobante administrativo. No es un CFDI. Para efectos fiscales, solicite su factura correspondiente."
+    mensaje_final: str = "Gracias por su compra. Conserve este comprobante para cualquier aclaración."
+    mostrar_observaciones: bool = True
+    mostrar_rfc_cliente: bool = True
+    mostrar_logo: bool = True
 
 
 @router.get("/fiscal")
@@ -167,12 +172,15 @@ def obtener_configuracion_tickets():
     conexion.row_factory = sqlite3.Row
     try:
         cursor = conexion.cursor()
-        cursor.execute("SELECT titulo_comprobante, pie_pagina, mostrar_datos_fiscales, ubicacion_emisor, alineacion_emisor, alineacion_titulo, plantilla FROM configuracion_tickets WHERE id = 1")
+        cursor.execute("SELECT titulo_comprobante, pie_pagina, mostrar_datos_fiscales, ubicacion_emisor, alineacion_emisor, alineacion_titulo, plantilla, leyenda_legal, mensaje_final, mostrar_observaciones, mostrar_rfc_cliente, mostrar_logo FROM configuracion_tickets WHERE id = 1")
         row = cursor.fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Configuración de tickets no encontrada.")
         res = dict(row)
-        res["mostrar_datos_fiscales"] = bool(res["mostrar_datos_fiscales"])
+        res["mostrar_datos_fiscales"] = bool(res.get("mostrar_datos_fiscales", 1))
+        res["mostrar_observaciones"] = bool(res.get("mostrar_observaciones", 1))
+        res["mostrar_rfc_cliente"] = bool(res.get("mostrar_rfc_cliente", 1))
+        res["mostrar_logo"] = bool(res.get("mostrar_logo", 1))
         return res
     finally:
         conexion.close()
@@ -185,9 +193,22 @@ def actualizar_configuracion_tickets(datos: TicketSettingsModel):
         cursor = conexion.cursor()
         cursor.execute('''
             UPDATE configuracion_tickets
-            SET titulo_comprobante = ?, pie_pagina = ?, mostrar_datos_fiscales = ?, ubicacion_emisor = ?, alineacion_emisor = ?, alineacion_titulo = ?, plantilla = ?, fecha_actualizacion = CURRENT_TIMESTAMP
+            SET titulo_comprobante = ?, pie_pagina = ?, mostrar_datos_fiscales = ?, ubicacion_emisor = ?, alineacion_emisor = ?, alineacion_titulo = ?, plantilla = ?, leyenda_legal = ?, mensaje_final = ?, mostrar_observaciones = ?, mostrar_rfc_cliente = ?, mostrar_logo = ?, fecha_actualizacion = CURRENT_TIMESTAMP
             WHERE id = 1
-        ''', (datos.titulo_comprobante, datos.pie_pagina, 1 if datos.mostrar_datos_fiscales else 0, datos.ubicacion_emisor, datos.alineacion_emisor, datos.alineacion_titulo, datos.plantilla))
+        ''', (
+            datos.titulo_comprobante,
+            datos.pie_pagina,
+            1 if datos.mostrar_datos_fiscales else 0,
+            datos.ubicacion_emisor,
+            datos.alineacion_emisor,
+            datos.alineacion_titulo,
+            datos.plantilla,
+            datos.leyenda_legal,
+            datos.mensaje_final,
+            1 if datos.mostrar_observaciones else 0,
+            1 if datos.mostrar_rfc_cliente else 0,
+            1 if datos.mostrar_logo else 0
+        ))
         conexion.commit()
         return {"status": "success", "mensaje": "Configuración de tickets actualizada correctamente."}
     except Exception as exc:
@@ -205,16 +226,97 @@ def obtener_comprobante_configuracion():
         cursor = conexion.cursor()
         cursor.execute("SELECT razon_social, rfc, codigo_postal, regimen_fiscal, domicilio_fiscal, telefono, correo, representante_legal FROM configuracion_fiscal WHERE id = 1")
         fiscal = cursor.fetchone()
-        cursor.execute("SELECT titulo_comprobante, pie_pagina, mostrar_datos_fiscales, ubicacion_emisor, alineacion_emisor, alineacion_titulo, plantilla FROM configuracion_tickets WHERE id = 1")
+        cursor.execute("SELECT titulo_comprobante, pie_pagina, mostrar_datos_fiscales, ubicacion_emisor, alineacion_emisor, alineacion_titulo, plantilla, leyenda_legal, mensaje_final, mostrar_observaciones, mostrar_rfc_cliente, mostrar_logo FROM configuracion_tickets WHERE id = 1")
         tickets = cursor.fetchone()
         if not fiscal or not tickets:
             raise HTTPException(status_code=404, detail="Configuraciones no encontradas.")
         res_tickets = dict(tickets)
-        res_tickets["mostrar_datos_fiscales"] = bool(res_tickets["mostrar_datos_fiscales"])
+        res_tickets["mostrar_datos_fiscales"] = bool(res_tickets.get("mostrar_datos_fiscales", 1))
+        res_tickets["mostrar_observaciones"] = bool(res_tickets.get("mostrar_observaciones", 1))
+        res_tickets["mostrar_rfc_cliente"] = bool(res_tickets.get("mostrar_rfc_cliente", 1))
+        res_tickets["mostrar_logo"] = bool(res_tickets.get("mostrar_logo", 1))
         return {
             "fiscal": dict(fiscal),
             "tickets": res_tickets
         }
     finally:
         conexion.close()
+
+
+
+class SectorModelo(BaseModel):
+    nombre: str = Field(..., min_length=1, max_length=100)
+
+
+@router.get("/sectores")
+def obtener_sectores():
+    conexion = get_db_connection()
+    conexion.row_factory = sqlite3.Row
+    try:
+        cursor = conexion.cursor()
+        cursor.execute("SELECT id, nombre FROM configuracion_sectores ORDER BY nombre ASC")
+        return [dict(row) for row in cursor.fetchall()]
+    finally:
+        conexion.close()
+
+
+@router.post("/sectores")
+def agregar_sector(datos: SectorModelo):
+    conexion = get_db_connection()
+    try:
+        cursor = conexion.cursor()
+        nombre_limpio = datos.nombre.strip()
+        if not nombre_limpio:
+            raise HTTPException(status_code=400, detail="El nombre del sector no puede estar vacío.")
+        cursor.execute("INSERT INTO configuracion_sectores (nombre) VALUES (?)", (nombre_limpio,))
+        conexion.commit()
+        id_nuevo = cursor.lastrowid
+        return {"id": id_nuevo, "nombre": nombre_limpio}
+    except sqlite3.IntegrityError:
+        raise HTTPException(status_code=400, detail="Este sector ya existe.")
+    except Exception as exc:
+        conexion.rollback()
+        raise HTTPException(status_code=500, detail=f"No se pudo guardar el sector: {exc}")
+    finally:
+        conexion.close()
+
+
+@router.put("/sectores/{id_sector}")
+def editar_sector(id_sector: int, datos: SectorModelo):
+    conexion = get_db_connection()
+    try:
+        cursor = conexion.cursor()
+        nombre_limpio = datos.nombre.strip()
+        if not nombre_limpio:
+            raise HTTPException(status_code=400, detail="El nombre del sector no puede estar vacío.")
+        cursor.execute("UPDATE configuracion_sectores SET nombre = ? WHERE id = ?", (nombre_limpio, id_sector))
+        conexion.commit()
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Sector no encontrado.")
+        return {"id": id_sector, "nombre": nombre_limpio}
+    except sqlite3.IntegrityError:
+        raise HTTPException(status_code=400, detail="Ya existe otro sector con ese nombre.")
+    except Exception as exc:
+        conexion.rollback()
+        raise HTTPException(status_code=500, detail=f"No se pudo actualizar el sector: {exc}")
+    finally:
+        conexion.close()
+
+
+@router.delete("/sectores/{id_sector}")
+def eliminar_sector(id_sector: int):
+    conexion = get_db_connection()
+    try:
+        cursor = conexion.cursor()
+        cursor.execute("DELETE FROM configuracion_sectores WHERE id = ?", (id_sector,))
+        conexion.commit()
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Sector no encontrado.")
+        return {"status": "success", "mensaje": "Sector eliminado correctamente."}
+    except Exception as exc:
+        conexion.rollback()
+        raise HTTPException(status_code=500, detail=f"No se pudo eliminar el sector: {exc}")
+    finally:
+        conexion.close()
+
 

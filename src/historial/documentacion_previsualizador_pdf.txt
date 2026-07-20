@@ -1,0 +1,95 @@
+========================================================================
+DOCUMENTACIÓN: IMPLEMENTACIÓN DE PREVISUALIZADOR DE PDF 1:1 EN TIEMPO REAL
+========================================================================
+
+Este documento describe la arquitectura y los pasos aplicados para lograr que 
+el previsualizador de plantillas en "Configuración > Operación y Folios" sea 
+exactamente 1:1 con el documento PDF real descargado por el usuario.
+
+------------------------------------------------------------------------
+1. EL PROBLEMA DETECTADO
+------------------------------------------------------------------------
+Originalmente, el previsualizador utilizaba elementos HTML y CSS que intentaban 
+imitar el diseño del PDF. Sin embargo:
+- Las fuentes web (sans-serif) y las proporciones de márgenes/rellenos diferían 
+  de las del motor PDF nativo (que dibuja líneas, rectángulos y fuentes Helvetica 
+  por coordenadas en puntos tipográficos).
+- El contenido tendía a verse amontonado en la web o a desalinearse de los 
+  bordes horizontales de forma distinta a la del PDF real.
+- Cualquier cambio realizado en el motor de PDF nativo ('ticketPdf.ts') requería 
+  ser duplicado y sincronizado manualmente en el código del previsualizador web.
+
+------------------------------------------------------------------------
+2. LA SOLUCIÓN ADOPTADA
+------------------------------------------------------------------------
+Para lograr una coincidencia 1:1 perfecta y definitiva, se eliminó la 
+recreación en HTML y se implementó un sistema de renderizado dinámico del 
+propio PDF en tiempo de ejecución:
+- El previsualizador genera un documento PDF real en memoria utilizando los 
+  datos y la configuración seleccionada por el usuario.
+- El PDF resultante se convierte en un Object URL temporal ('blob:http://...') 
+  y se monta dentro de un elemento '<iframe>' nativo de HTML.
+- El visor de PDF interno del navegador se encarga de renderizar el archivo 
+  directamente en pantalla, logrando una fidelidad exacta del 100%.
+
+------------------------------------------------------------------------
+3. CAMBIOS APLICADOS PASO A PASO
+------------------------------------------------------------------------
+
+Paso 3.1: Refactorización en 'src/historial/ticketPdf.ts'
+--------------------------------------------------------
+1. Exportamos las interfaces de estructura de datos:
+   - 'TicketTransaction': Interfaz de la información de la transacción.
+   - 'TicketOperationDetail': Interfaz del desglose de conceptos y pagos.
+2. Dividimos la función 'downloadTicketPdf()' en dos responsabilidades:
+   - 'generateTicketPdfBlob()': Función exportada que se encarga de realizar 
+     toda la computación de coordenadas, maquetado de plantillas y empaquetado 
+     de comandos PDF, retornando un objeto 'Blob' puro de tipo 'application/pdf'.
+   - 'downloadTicketPdf()': Consume la función anterior para obtener el Blob, 
+     crear un URL temporal, simular el clic en un enlace de descarga y revocar 
+     el URL de inmediato.
+
+Paso 3.2: Componente Auxiliar 'LivePdfPreview' en 'OperationFolioSettings.tsx'
+-----------------------------------------------------------------------------
+Creamos un componente funcional en React con las siguientes características:
+1. 'mockTransaction' y 'mockDetail': Datos mockup de ejemplo que representan 
+   una transacción escolar real (mensualidad de colegiatura de $2,500.00).
+2. 'useEffect': Se dispara automáticamente cada vez que el usuario altera los 
+   parámetros del formulario (plantilla, título, pie, datos fiscales, etc.).
+3. 'generateTicketPdfBlob()': Genera el PDF en base a la configuración actual 
+   del componente.
+4. 'URL.createObjectURL(blob)': Genera la ruta temporal y la guarda en un estado.
+5. Limpieza de Memoria: El retorno del efecto llama a 'URL.revokeObjectURL(url)' 
+   para liberar la memoria RAM cada vez que el PDF se regenera o el componente 
+   se desmonta.
+6. Renderizado de Iframe: Retorna un '<iframe>' con la ruta del PDF. Para dar 
+   una apariencia limpia sin botones adicionales del visor, añadimos parámetros 
+   a la URL del documento:
+   'src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}'
+
+Paso 3.3: Integración en la Interfaz de Usuario
+------------------------------------------------
+1. En el Carrusel de Tarjetas:
+   Se monta '<LivePdfPreview isMiniature={true} />' dentro de un contenedor 
+   de 480x620px que a su vez se escala a un tercio del tamaño ('scale-[0.333]') 
+   con CSS. El atributo 'isMiniature={true}' añade 'pointer-events: none' 
+   al iframe para desactivar la interacción del ratón y mantener la fluidez 
+   del carrusel.
+2. En el Modal de Pantalla Completa:
+   El modal monta '<LivePdfPreview isMiniature={false} />' a tamaño completo 
+   (480x620px) para permitir el scroll e interacción con el PDF.
+
+------------------------------------------------------------------------
+4. BENEFICIOS Y MANTENIMIENTO
+------------------------------------------------------------------------
+- Fidelidad 1:1: Lo que el administrador del colegio ve en la configuración 
+  es exactamente lo que se imprimirá o enviará a los padres de familia.
+- Fuente única de verdad (Single Source of Truth): Toda la maquetación visual 
+  y las coordenadas de textos/líneas viven exclusivamente en 'ticketPdf.ts'. 
+  Si en el futuro se crea o modifica una plantilla, el cambio impacta de 
+  forma automática tanto en la previsualización como en la descarga sin tocar 
+  'OperationFolioSettings.tsx'.
+- Carga eficiente: Dado que el PDF se genera localmente en Javascript en la 
+  máquina del cliente, la regeneración al presionar botones o escribir texto 
+  es instantánea y no sobrecarga el servidor de base de datos.
+========================================================================

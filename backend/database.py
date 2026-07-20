@@ -9,6 +9,7 @@ def get_db_connection():
     # Retorna la conexión a la base de datos usando una ruta absoluta.
     conexion = sqlite3.connect(DB_PATH, timeout=15.0)
     conexion.execute("PRAGMA foreign_keys = ON")
+    conexion.execute("PRAGMA journal_mode = WAL")
     return conexion
 
 
@@ -317,12 +318,29 @@ def inicializar_base_datos():
             alineacion_emisor       TEXT NOT NULL DEFAULT 'IZQUIERDA',
             alineacion_titulo       TEXT NOT NULL DEFAULT 'IZQUIERDA',
             plantilla               TEXT NOT NULL DEFAULT 'PLANTILLA_1',
+            leyenda_legal           TEXT NOT NULL DEFAULT 'Este documento es una nota de venta / comprobante administrativo. No es un CFDI. Para efectos fiscales, solicite su factura correspondiente.',
+            mensaje_final           TEXT NOT NULL DEFAULT 'Gracias por su compra. Conserve este comprobante para cualquier aclaración.',
+            mostrar_observaciones   INTEGER NOT NULL DEFAULT 1,
+            mostrar_rfc_cliente     INTEGER NOT NULL DEFAULT 1,
+            mostrar_logo            INTEGER NOT NULL DEFAULT 1,
             fecha_actualizacion     DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     ''')
     cursor.execute('''
         INSERT OR IGNORE INTO configuracion_tickets (id) VALUES (1)
     ''')
+
+    # 15. CONFIGURACIÓN DE SECTORES DE CLIENTES
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS configuracion_sectores (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT UNIQUE NOT NULL
+        )
+    ''')
+    for sector in ["Normal", "Gubernamental", "Capacitadoras"]:
+        cursor.execute('''
+            INSERT OR IGNORE INTO configuracion_sectores (nombre) VALUES (?)
+        ''', (sector,))
 
     for clave, nombre, prefijo in [
         ("V", "Ventas de contado", "V"),
@@ -373,6 +391,26 @@ def inicializar_base_datos():
         pass
     try:
         cursor.execute("ALTER TABLE configuracion_tickets ADD COLUMN plantilla TEXT NOT NULL DEFAULT 'PLANTILLA_1'")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE configuracion_tickets ADD COLUMN leyenda_legal TEXT NOT NULL DEFAULT 'Este documento es una nota de venta / comprobante administrativo. No es un CFDI. Para efectos fiscales, solicite su factura correspondiente.'")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE configuracion_tickets ADD COLUMN mensaje_final TEXT NOT NULL DEFAULT 'Gracias por su compra. Conserve este comprobante para cualquier aclaración.'")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE configuracion_tickets ADD COLUMN mostrar_observaciones INTEGER NOT NULL DEFAULT 1")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE configuracion_tickets ADD COLUMN mostrar_rfc_cliente INTEGER NOT NULL DEFAULT 1")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE configuracion_tickets ADD COLUMN mostrar_logo INTEGER NOT NULL DEFAULT 1")
     except sqlite3.OperationalError:
         pass
     for col_sql in [
