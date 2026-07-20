@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { Building2, Mail, Package, Palette, Receipt } from "lucide-react";
 
-export type SettingsTab = "identity" | "fiscal" | "operation" | "notifications" | "inventory";
+export type SettingsTab = "fiscal" | "operation" | "notifications" | "inventory";
 
 interface SettingsLayoutProps {
   activeTab: SettingsTab;
@@ -11,7 +11,6 @@ interface SettingsLayoutProps {
 }
 
 const tabs = [
-  { id: "identity" as const, label: "Identidad y Marca", icon: Palette },
   { id: "fiscal" as const, label: "Datos Fiscales", icon: Building2 },
   { id: "operation" as const, label: "Operación y Folios", icon: Receipt },
   { id: "notifications" as const, label: "Notificaciones", icon: Mail },

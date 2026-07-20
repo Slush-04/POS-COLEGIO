@@ -130,6 +130,7 @@ class TicketSettingsModel(BaseModel):
     mostrar_observaciones: bool = True
     mostrar_rfc_cliente: bool = True
     mostrar_logo: bool = True
+    logo_url: str = ""
 
 
 @router.get("/fiscal")
@@ -172,7 +173,7 @@ def obtener_configuracion_tickets():
     conexion.row_factory = sqlite3.Row
     try:
         cursor = conexion.cursor()
-        cursor.execute("SELECT titulo_comprobante, pie_pagina, mostrar_datos_fiscales, ubicacion_emisor, alineacion_emisor, alineacion_titulo, plantilla, leyenda_legal, mensaje_final, mostrar_observaciones, mostrar_rfc_cliente, mostrar_logo FROM configuracion_tickets WHERE id = 1")
+        cursor.execute("SELECT titulo_comprobante, pie_pagina, mostrar_datos_fiscales, ubicacion_emisor, alineacion_emisor, alineacion_titulo, plantilla, leyenda_legal, mensaje_final, mostrar_observaciones, mostrar_rfc_cliente, mostrar_logo, COALESCE(logo_url, '') AS logo_url FROM configuracion_tickets WHERE id = 1")
         row = cursor.fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Configuración de tickets no encontrada.")
@@ -181,6 +182,7 @@ def obtener_configuracion_tickets():
         res["mostrar_observaciones"] = bool(res.get("mostrar_observaciones", 1))
         res["mostrar_rfc_cliente"] = bool(res.get("mostrar_rfc_cliente", 1))
         res["mostrar_logo"] = bool(res.get("mostrar_logo", 1))
+        res["logo_url"] = res.get("logo_url") or ""
         return res
     finally:
         conexion.close()
@@ -193,7 +195,7 @@ def actualizar_configuracion_tickets(datos: TicketSettingsModel):
         cursor = conexion.cursor()
         cursor.execute('''
             UPDATE configuracion_tickets
-            SET titulo_comprobante = ?, pie_pagina = ?, mostrar_datos_fiscales = ?, ubicacion_emisor = ?, alineacion_emisor = ?, alineacion_titulo = ?, plantilla = ?, leyenda_legal = ?, mensaje_final = ?, mostrar_observaciones = ?, mostrar_rfc_cliente = ?, mostrar_logo = ?, fecha_actualizacion = CURRENT_TIMESTAMP
+            SET titulo_comprobante = ?, pie_pagina = ?, mostrar_datos_fiscales = ?, ubicacion_emisor = ?, alineacion_emisor = ?, alineacion_titulo = ?, plantilla = ?, leyenda_legal = ?, mensaje_final = ?, mostrar_observaciones = ?, mostrar_rfc_cliente = ?, mostrar_logo = ?, logo_url = ?, fecha_actualizacion = CURRENT_TIMESTAMP
             WHERE id = 1
         ''', (
             datos.titulo_comprobante,
@@ -207,7 +209,8 @@ def actualizar_configuracion_tickets(datos: TicketSettingsModel):
             datos.mensaje_final,
             1 if datos.mostrar_observaciones else 0,
             1 if datos.mostrar_rfc_cliente else 0,
-            1 if datos.mostrar_logo else 0
+            1 if datos.mostrar_logo else 0,
+            datos.logo_url or ""
         ))
         conexion.commit()
         return {"status": "success", "mensaje": "Configuración de tickets actualizada correctamente."}
@@ -226,7 +229,7 @@ def obtener_comprobante_configuracion():
         cursor = conexion.cursor()
         cursor.execute("SELECT razon_social, rfc, codigo_postal, regimen_fiscal, domicilio_fiscal, telefono, correo, representante_legal FROM configuracion_fiscal WHERE id = 1")
         fiscal = cursor.fetchone()
-        cursor.execute("SELECT titulo_comprobante, pie_pagina, mostrar_datos_fiscales, ubicacion_emisor, alineacion_emisor, alineacion_titulo, plantilla, leyenda_legal, mensaje_final, mostrar_observaciones, mostrar_rfc_cliente, mostrar_logo FROM configuracion_tickets WHERE id = 1")
+        cursor.execute("SELECT titulo_comprobante, pie_pagina, mostrar_datos_fiscales, ubicacion_emisor, alineacion_emisor, alineacion_titulo, plantilla, leyenda_legal, mensaje_final, mostrar_observaciones, mostrar_rfc_cliente, mostrar_logo, COALESCE(logo_url, '') AS logo_url FROM configuracion_tickets WHERE id = 1")
         tickets = cursor.fetchone()
         if not fiscal or not tickets:
             raise HTTPException(status_code=404, detail="Configuraciones no encontradas.")
@@ -235,6 +238,7 @@ def obtener_comprobante_configuracion():
         res_tickets["mostrar_observaciones"] = bool(res_tickets.get("mostrar_observaciones", 1))
         res_tickets["mostrar_rfc_cliente"] = bool(res_tickets.get("mostrar_rfc_cliente", 1))
         res_tickets["mostrar_logo"] = bool(res_tickets.get("mostrar_logo", 1))
+        res_tickets["logo_url"] = res_tickets.get("logo_url") or ""
         return {
             "fiscal": dict(fiscal),
             "tickets": res_tickets

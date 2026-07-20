@@ -9,9 +9,13 @@ import {
   FileText,
   GraduationCap,
   HandCoins,
+  Image as ImageIcon,
   Loader2,
   ReceiptText,
   ShoppingCart,
+  Trash2,
+  Upload,
+  UploadCloud,
   WalletCards,
 } from "lucide-react";
 import { generateTicketPdfBlob } from "../../historial/ticketPdf";
@@ -43,6 +47,7 @@ interface TicketSettings {
   mostrar_observaciones?: boolean;
   mostrar_rfc_cliente?: boolean;
   mostrar_logo?: boolean;
+  logo_url?: string;
 }
 
 interface OperationSettings {
@@ -69,7 +74,7 @@ const TEMPLATE_OPTIONS = [
   {
     id: "PLANTILLA_3",
     name: "Plantilla 3: Diseño Ejecutivo",
-    description: "Encabezado compacto con doble línea elegante y distribución limpia.",
+    description: "Diseño corporativo split con logo destacado, tarjeta de folio y doble línea ejecutiva.",
   },
   {
     id: "PLANTILLA_4",
@@ -79,7 +84,7 @@ const TEMPLATE_OPTIONS = [
   {
     id: "PLANTILLA_5",
     name: "Plantilla 5: Diseño Ticket",
-    description: "Formato de comprobante de caja compacto, ideal para tiras térmicas.",
+    description: "Formato de comprobante centrado con logo prominente, tarjeta de folio y estilo POS.",
   },
 ];
 
@@ -293,6 +298,45 @@ export const OperationFolioSettings = forwardRef<OperationFolioSettingsHandle>(f
   const [isHovered, setIsHovered] = useState(false);
 
   const lastWheelTime = useRef(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogoUpload = (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      setMessage({ type: "error", text: "El archivo seleccionado debe ser una imagen (PNG, JPG, SVG, WEBP)." });
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setMessage({ type: "error", text: "La imagen no debe superar los 2MB de tamaño." });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const rawResult = e.target?.result as string;
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth || img.width || 400;
+        canvas.height = img.naturalHeight || img.height || 200;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.fillStyle = "#FFFFFF";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0);
+          const jpegDataUrl = canvas.toDataURL("image/jpeg", 0.92);
+          setSettings((current) => current ? {
+            ...current,
+            tickets: { ...current.tickets, logo_url: jpegDataUrl }
+          } : null);
+          setMessage(null);
+        }
+      };
+      img.onerror = () => {
+        setMessage({ type: "error", text: "No se pudo procesar la imagen seleccionada." });
+      };
+      img.src = rawResult;
+    };
+    reader.readAsDataURL(file);
+  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -507,6 +551,94 @@ export const OperationFolioSettings = forwardRef<OperationFolioSettingsHandle>(f
 
         {settings && (
           <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.035] backdrop-blur-xl p-6 space-y-6">
+            {/* Logotipo de la Empresa / Institución */}
+            <div className="space-y-3 pb-6 border-b border-white/10">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-sm font-medium text-zinc-300 flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-blue-400" />
+                    Logotipo de la Empresa / Institución
+                  </label>
+                  <p className="text-[10px] text-zinc-500 mt-0.5">
+                    Este logotipo se incluirá en el encabezado de los tickets y notas de venta generadas.
+                  </p>
+                </div>
+                {settings.tickets.logo_url && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSettings((current) => current ? {
+                        ...current,
+                        tickets: { ...current.tickets, logo_url: "" }
+                      } : null);
+                      setMessage(null);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 rounded-lg text-xs font-medium transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Eliminar logotipo
+                  </button>
+                )}
+              </div>
+
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleLogoUpload(file);
+                }}
+              />
+
+              {settings.tickets.logo_url ? (
+                <div className="flex flex-col sm:flex-row items-center gap-4 p-4 rounded-xl border border-white/10 bg-black/25">
+                  <div className="w-32 h-20 bg-white/5 border border-white/10 rounded-lg overflow-hidden flex items-center justify-center p-2">
+                    <img
+                      src={settings.tickets.logo_url}
+                      alt="Logotipo institucional"
+                      className="max-w-full max-h-full object-contain"
+                    />
+                  </div>
+                  <div className="flex-1 text-center sm:text-left space-y-1">
+                    <p className="text-xs font-semibold text-zinc-200">Logotipo cargado correctamente</p>
+                    <p className="text-[10px] text-zinc-400">
+                      Se mostrará en la esquina superior de tus notas de venta y tickets PDF.
+                    </p>
+                    <div className="pt-1">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/15 text-white border border-white/15 rounded-lg text-xs font-medium transition-colors"
+                      >
+                        <Upload className="w-3.5 h-3.5 text-blue-400" />
+                        Cambiar logotipo
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) handleLogoUpload(file);
+                  }}
+                  className="border-2 border-dashed border-white/15 hover:border-blue-400/50 rounded-xl p-6 flex flex-col items-center justify-center bg-black/20 hover:bg-black/40 transition-all cursor-pointer group"
+                >
+                  <UploadCloud className="w-10 h-10 text-zinc-500 group-hover:text-blue-400 transition-colors mb-2" />
+                  <p className="text-xs font-semibold text-zinc-200 mb-0.5">Arrastra y suelta el logotipo de la empresa aquí</p>
+                  <p className="text-[10px] text-zinc-500 mb-3">Formatos: PNG, JPG, WEBP o SVG (Máx. 2MB)</p>
+                  <span className="px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold rounded-lg group-hover:bg-blue-500 group-hover:text-white transition-all">
+                    Examinar Archivos
+                  </span>
+                </div>
+              )}
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-zinc-300">Título de Comprobante</label>

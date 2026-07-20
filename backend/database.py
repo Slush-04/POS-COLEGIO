@@ -323,12 +323,17 @@ def inicializar_base_datos():
             mostrar_observaciones   INTEGER NOT NULL DEFAULT 1,
             mostrar_rfc_cliente     INTEGER NOT NULL DEFAULT 1,
             mostrar_logo            INTEGER NOT NULL DEFAULT 1,
+            logo_url                TEXT DEFAULT '',
             fecha_actualizacion     DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     ''')
     cursor.execute('''
         INSERT OR IGNORE INTO configuracion_tickets (id) VALUES (1)
     ''')
+    try:
+        cursor.execute("ALTER TABLE configuracion_tickets ADD COLUMN logo_url TEXT DEFAULT ''")
+    except Exception:
+        pass
 
     # 15. CONFIGURACIÓN DE SECTORES DE CLIENTES
     cursor.execute('''

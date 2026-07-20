@@ -1,14 +1,13 @@
 import { type RefObject, useRef, useState } from "react";
 import { Save } from "lucide-react";
 import { FiscalSettings, FiscalSettingsHandle } from "./settings/FiscalSettings";
-import { IdentitySettings } from "./settings/IdentitySettings";
 import { InventorySettings } from "./settings/InventorySettings";
 import { NotificationSettings } from "./settings/NotificationSettings";
 import { OperationFolioSettings, OperationFolioSettingsHandle } from "./settings/OperationFolioSettings";
 import { SettingsLayout, SettingsTab } from "./settings/SettingsLayout";
 
 export function SettingsView() {
-  const [activeTab, setActiveTab] = useState<SettingsTab>("identity");
+  const [activeTab, setActiveTab] = useState<SettingsTab>("fiscal");
   const operationSettingsRef = useRef<OperationFolioSettingsHandle>(null);
   const fiscalSettingsRef = useRef<FiscalSettingsHandle>(null);
 
@@ -50,9 +49,7 @@ function SettingsPanel({ activeTab, operationSettingsRef, fiscalSettingsRef }: {
     case "notifications":
       return <NotificationSettings />;
     case "inventory":
-      return <InventorySettings />;
-    case "identity":
     default:
-      return <IdentitySettings />;
+      return <InventorySettings />;
   }
 }
