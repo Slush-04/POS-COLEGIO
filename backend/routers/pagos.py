@@ -549,11 +549,22 @@ def obtener_dashboard_financiero():
                   AND d.estado = 'PENDIENTE'
             ''', (mes_inicio,))
             por_cobrar = float(cursor.fetchone()[0] or 0)
+            
+            cursor.execute('''
+                SELECT COALESCE(SUM(total), 0)
+                FROM operaciones
+                WHERE tipo_operacion = 'COMPRA'
+                  AND estado = 'COMPLETADA'
+                  AND strftime('%Y-%m', fecha_evento) = strftime('%Y-%m', ?)
+            ''', (mes_inicio,))
+            egresos = float(cursor.fetchone()[0] or 0)
+            
             fecha_mes = datetime.strptime(mes_inicio, '%Y-%m-%d')
             meses.append({
                 "name": ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"][fecha_mes.month - 1],
                 "ingresos": round(ingresos, 2),
                 "por_cobrar": round(por_cobrar, 2),
+                "egresos": round(egresos, 2),
             })
 
         comparativa = None if ingresos_mes_anterior == 0 else round(((ingresos_mes - ingresos_mes_anterior) / ingresos_mes_anterior) * 100, 1)

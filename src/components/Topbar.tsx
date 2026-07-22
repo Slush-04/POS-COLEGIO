@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Clock3, LayoutDashboard, MonitorSmartphone, ReceiptText, CalendarDays, Users, Settings, Landmark, CreditCard } from "lucide-react";
 
 interface TopbarProps {
@@ -6,6 +7,17 @@ interface TopbarProps {
 }
 
 export function Topbar({ currentView, onNavigate }: TopbarProps) {
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("http://localhost:8000/api/configuracion/tickets")
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.logo_url) setLogoUrl(data.logo_url);
+      })
+      .catch(() => {});
+  }, []);
+
   const navItems = [
     { id: "dashboard", label: "Panel", icon: LayoutDashboard },
     { id: "pos", label: "Punto de Venta", icon: MonitorSmartphone },
@@ -20,9 +32,15 @@ export function Topbar({ currentView, onNavigate }: TopbarProps) {
     <header className="h-[72px] bg-zinc-950/95 border-b border-white/10 flex items-center justify-between px-5 lg:px-8 flex-shrink-0 gap-4 shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
       {/* Brand Logo & Name */}
       <div className="flex items-center gap-3.5 flex-shrink-0">
-        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
-          <Landmark className="w-5 h-5" />
-        </div>
+        {logoUrl ? (
+          <div className="h-[43px] max-w-[173px] bg-white rounded-lg p-1 flex items-center justify-center">
+            <img src={logoUrl} alt="Logo" className="h-full w-auto object-contain" />
+          </div>
+        ) : (
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+            <Landmark className="w-5 h-5" />
+          </div>
+        )}
         <div>
           <h1 className="font-bold text-base tracking-tight text-white leading-tight">SI.CCO</h1>
           <p className="hidden xl:block text-[10px] uppercase tracking-[0.16em] text-zinc-500 mt-0.5">Gestión administrativa</p>
@@ -71,3 +89,4 @@ export function Topbar({ currentView, onNavigate }: TopbarProps) {
     </header>
   );
 }
+

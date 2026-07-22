@@ -229,9 +229,6 @@ export function CoursesView() {
           {/* Detail Header & Pricing */}
           <div className="p-6 border-b border-border-table flex flex-col lg:flex-row justify-between gap-6 lg:items-center bg-black/20">
             <div className="flex gap-4">
-              <div className="mt-1">
-                <ClipboardList className="w-6 h-6 text-zinc-400" />
-              </div>
               <div>
                 <h2 className="text-2xl font-bold text-white mb-1">{cursoSeleccionado.nombre}</h2>
                 <div className="flex items-center gap-2 text-sm text-zinc-400">
@@ -350,7 +347,7 @@ export function CoursesView() {
                       <td className="px-6 py-4 text-right">
                         {(p.saldo_pendiente > 0 || p.estado_pago !== 'PAGADO') && (
                           <button
-                          onClick={() => { setSelectedPaymentName(p.nombre_participante); setSelectedPaymentAmount(p.saldo_pendiente?.toString() || p.monto_total?.toString() || "0"); setSelectedPaymentDeudaId(p.id_deuda || null); setIsPagoOpen(true); }}
+                            onClick={() => { setSelectedPaymentName(p.nombre_participante); setSelectedPaymentAmount(p.saldo_pendiente?.toString() || p.monto_total?.toString() || "0"); setSelectedPaymentDeudaId(p.id_deuda || null); setIsPagoOpen(true); }}
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 border border-border-table hover:bg-zinc-800 text-zinc-300 rounded text-xs font-medium transition-colors ml-auto">
                             <DollarSign className="w-3.5 h-3.5" />
                             PAGO

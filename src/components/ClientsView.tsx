@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
-import { Search, Filter, Download, UserPlus, Plus, X } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Search, Filter, Download, UserPlus, Plus, X, FileSpreadsheet, UploadCloud, CheckCircle2, AlertCircle, HelpCircle } from "lucide-react";
+import * as XLSX from "xlsx";
 import { Paginacion } from "./ui/Paginacion";
 import { PAGINATION_CONFIG } from "./ui/configuracion";
 
@@ -85,6 +86,10 @@ export function ClientsView() {
   const [listaClientes, setListaClientes] = useState<Client[]>([]);
   const [sectores, setSectores] = useState<Array<{ id: number; nombre: string }>>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [clientesAImportar, setClientesAImportar] = useState<any[]>([]);
+  const [importando, setImportando] = useState(false);
+  const [resultadoImportacion, setResultadoImportacion] = useState<any>(null);
   const [clienteSeleccionado, setClienteSeleccionado] = useState<Client | null>(null);
   const [paginaActual, setPaginaActual] = useState(1);
   const [itemsPorPagina, setItemsPorPagina] = useState(PAGINATION_CONFIG.defaultLimit);
@@ -92,6 +97,8 @@ export function ClientsView() {
   const [filtroTipoCliente, setFiltroTipoCliente] = useState<string>("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (clienteSeleccionado) {
@@ -115,6 +122,144 @@ export function ClientsView() {
       setFormData(estadoInicial);
     }
   }, [clienteSeleccionado]);
+
+  // Generar y descargar la plantilla modelo de Excel
+  const descargarPlantillaExcel = () => {
+    const dataEjemplo = [
+      {
+        "Nombre": "Juan Pérez García",
+        "Correo": "juan.perez@ejemplo.com",
+        "Telefono": "5551234567",
+        "Tipo Cliente": "estudiante",
+        "RFC": "PEGJ900101XX1",
+        "CURP": "PEGJ900101HDFRR01",
+        "Razon Social": "Juan Pérez García",
+        "Genero": "Masculino",
+        "Fecha Nacimiento": "1990-05-15",
+        "Regimen Fiscal": "616",
+        "Uso CFDI": "D10",
+        "Estatus Operativo": "Activo",
+        "Sector": "Normal"
+      },
+      {
+        "Nombre": "María López Fernández",
+        "Correo": "maria.lopez@ejemplo.com",
+        "Telefono": "5559876543",
+        "Tipo Cliente": "asociado",
+        "RFC": "LOFM850412YY2",
+        "CURP": "",
+        "Razon Social": "",
+        "Genero": "Femenino",
+        "Fecha Nacimiento": "1985-04-12",
+        "Regimen Fiscal": "605",
+        "Uso CFDI": "G03",
+        "Estatus Operativo": "Activo",
+        "Sector": "Normal"
+      }
+    ];
+
+    const ws = XLSX.utils.json_to_sheet(dataEjemplo);
+    ws['!cols'] = [
+      { wch: 26 }, // Nombre
+      { wch: 26 }, // Correo
+      { wch: 15 }, // Telefono
+      { wch: 18 }, // Tipo Cliente
+      { wch: 16 }, // RFC
+      { wch: 22 }, // CURP
+      { wch: 26 }, // Razon Social
+      { wch: 12 }, // Genero
+      { wch: 16 }, // Fecha Nacimiento
+      { wch: 16 }, // Regimen Fiscal
+      { wch: 12 }, // Uso CFDI
+      { wch: 18 }, // Estatus Operativo
+      { wch: 14 }  // Sector
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Clientes");
+    XLSX.writeFile(wb, "plantilla_importacion_clientes.xlsx");
+  };
+
+  // Leer y procesar archivo cargado por el usuario
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setResultadoImportacion(null);
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const rawData = XLSX.utils.sheet_to_json<any>(ws);
+
+        const parsedRows = rawData.map((row: any, idx: number) => {
+          const getVal = (keys: string[]) => {
+            for (const k of keys) {
+              const foundKey = Object.keys(row).find(
+                (rk) => rk.trim().toLowerCase() === k.toLowerCase()
+              );
+              if (foundKey !== undefined && row[foundKey] !== null && row[foundKey] !== undefined) {
+                return String(row[foundKey]).trim();
+              }
+            }
+            return "";
+          };
+
+          return {
+            rowNum: idx + 2,
+            nombre: getVal(["Nombre", "nombre", "Nombre Completo", "Cliente"]),
+            correo: getVal(["Correo", "correo", "Email", "Correo Electrónico"]),
+            telefono: getVal(["Telefono", "telefono", "Teléfono", "Celular"]),
+            tipo_cliente: getVal(["Tipo Cliente", "tipo_cliente", "Tipo de Cliente", "Tipo"]) || "publico general",
+            rfc: getVal(["RFC", "rfc"]),
+            curp: getVal(["CURP", "curp"]),
+            razon_social: getVal(["Razon Social", "razon_social", "Razón Social"]),
+            genero: getVal(["Genero", "genero", "Género"]),
+            fecha_nacimiento: getVal(["Fecha Nacimiento", "fecha_nacimiento", "Fecha de Nacimiento"]),
+            regimen_fiscal: getVal(["Regimen Fiscal", "regimen_fiscal", "Régimen Fiscal"]),
+            uso_cfdi: getVal(["Uso CFDI", "uso_cfdi", "Uso de CFDI"]) || "G03",
+            estatus_operativo: getVal(["Estatus Operativo", "estatus_operativo", "Estatus"]) || "Activo",
+            sector: getVal(["Sector", "sector"]) || "Normal"
+          };
+        });
+
+        setClientesAImportar(parsedRows);
+      } catch (error) {
+        alert("Error al leer el archivo de Excel. Verifica que sea un formato .xlsx, .xls o .csv válido.");
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  const ejecutarImportacion = async () => {
+    if (clientesAImportar.length === 0) return;
+    setImportando(true);
+    setResultadoImportacion(null);
+
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/clientes/importar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(clientesAImportar.map(({ rowNum, ...rest }) => rest))
+      });
+
+      const datos = await res.json();
+      if (res.ok) {
+        setResultadoImportacion(datos);
+        setClientesAImportar([]);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        cargarClientes();
+      } else {
+        alert("❌ Error al importar: " + (datos.detail || "Consulte logs del servidor"));
+      }
+    } catch (err) {
+      alert("❌ Fallo de conexión con el servidor backend.");
+    } finally {
+      setImportando(false);
+    }
+  };
 
   const clientesProcesados = React.useMemo(() => {
     let resultado = [...listaClientes];
@@ -257,17 +402,31 @@ export function ClientsView() {
           <h1 className="text-3xl font-bold text-white tracking-tight">Directorio de Clientes</h1>
           <p className="text-zinc-400 mt-1">Gestionar perfiles de facturación de estudiantes y clientes.</p>
         </div>
-        <button 
-          onClick={() => {
-            setClienteSeleccionado(null);
-            handleLimpiar();
-            setIsModalOpen(true);
-          }}
-          className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-custom text-sm font-medium transition-colors shadow-sm"
-        >
-          <Plus className="w-4 h-4" />
-          Nuevo Cliente
-        </button>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => {
+              setClientesAImportar([]);
+              setResultadoImportacion(null);
+              setIsImportModalOpen(true);
+            }}
+            className="flex items-center gap-2 px-4 py-2 border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-custom text-sm font-medium transition-colors shadow-sm"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            Importar Excel
+          </button>
+
+          <button 
+            onClick={() => {
+              setClienteSeleccionado(null);
+              handleLimpiar();
+              setIsModalOpen(true);
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-custom text-sm font-medium transition-colors shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+            Nuevo Cliente
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-col gap-6 items-start w-full">
@@ -573,6 +732,227 @@ export function ClientsView() {
               </button>
             </div>
           </form>
+            </div>
+          </div>
+        )}
+
+        {/* Modal para Importar Excel */}
+        {isImportModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className="w-full max-w-[850px] bg-white/[0.045] backdrop-blur-xl border border-white/12 rounded-custom shadow-[0_16px_45px_rgba(0,0,0,0.22)] p-6 relative max-h-[90vh] overflow-y-auto space-y-6">
+              {/* Header Modal */}
+              <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                    <FileSpreadsheet className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-white">Importar Clientes mediante Excel</h2>
+                    <p className="text-xs text-zinc-400">Carga masiva de directorio mediante archivo .xlsx o .csv</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => {
+                    setIsImportModalOpen(false);
+                    setClientesAImportar([]);
+                    setResultadoImportacion(null);
+                  }}
+                  className="text-zinc-500 hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Banner Descarga Plantilla */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
+                <div className="space-y-1 text-center sm:text-left">
+                  <h3 className="text-sm font-semibold text-emerald-300 flex items-center gap-1.5 justify-center sm:justify-start">
+                    <Download className="w-4 h-4" />
+                    Obtener Formato de Excel Modelo
+                  </h3>
+                  <p className="text-xs text-zinc-400">
+                    Descarga nuestra plantilla oficial con las columnas configuradas y filas de ejemplo.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={descargarPlantillaExcel}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-semibold transition-all shadow-md shrink-0"
+                >
+                  <Download className="w-4 h-4" />
+                  Descargar Plantilla (.xlsx)
+                </button>
+              </div>
+
+              {/* Guía de Formato Requerido */}
+              <div className="rounded-xl border border-border-table bg-zinc-900/40 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-300 flex items-center gap-2">
+                    <HelpCircle className="w-4 h-4 text-blue-400" />
+                    Estructura y Columnas Requeridas del Documento
+                  </h3>
+                  <span className="text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded border border-white/10">Instrucciones</span>
+                </div>
+                <p className="text-xs text-zinc-400">
+                  El archivo debe contener una fila de encabezados en la primera hoja con exactamente o variaciones de los siguientes nombres de columna:
+                </p>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 text-xs pt-1">
+                  <div className="p-2.5 rounded-lg bg-black/30 border border-white/5 space-y-1">
+                    <span className="font-semibold text-emerald-400">Nombre *</span>
+                    <p className="text-[10px] text-zinc-400">Nombre completo del cliente / estudiante (Obligatorio).</p>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-black/30 border border-white/5 space-y-1">
+                    <span className="font-semibold text-emerald-400">Correo *</span>
+                    <p className="text-[10px] text-zinc-400">Correo de contacto principal (Obligatorio).</p>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-black/30 border border-white/5 space-y-1">
+                    <span className="font-semibold text-zinc-300">Tipo Cliente</span>
+                    <p className="text-[10px] text-zinc-500">publico general, asociado, estudiante, colaborador, asociado externo.</p>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-black/30 border border-white/5 space-y-1">
+                    <span className="font-semibold text-zinc-300">RFC / CURP</span>
+                    <p className="text-[10px] text-zinc-500">Claves fiscales únicas. RFCs existentes serán omitidos para evitar duplicados.</p>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-black/30 border border-white/5 space-y-1">
+                    <span className="font-semibold text-zinc-300">Telefono / Razon Social</span>
+                    <p className="text-[10px] text-zinc-500">Datos complementarios de contacto y facturación.</p>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-black/30 border border-white/5 space-y-1">
+                    <span className="font-semibold text-zinc-300">Fecha Nacimiento</span>
+                    <p className="text-[10px] text-zinc-500">Formato AAAA-MM-DD (ej. 1990-05-15).</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Zona de Carga de Archivo */}
+              <div className="space-y-3">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept=".xlsx, .xls, .csv"
+                  className="hidden"
+                  onChange={handleFileUpload}
+                />
+                
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) {
+                      const dt = new DataTransfer();
+                      dt.items.add(file);
+                      if (fileInputRef.current) {
+                        fileInputRef.current.files = dt.files;
+                        handleFileUpload({ target: fileInputRef.current } as any);
+                      }
+                    }
+                  }}
+                  className="border-2 border-dashed border-white/15 hover:border-emerald-400/50 rounded-xl p-6 flex flex-col items-center justify-center bg-black/20 hover:bg-black/40 transition-all cursor-pointer group"
+                >
+                  <UploadCloud className="w-10 h-10 text-zinc-500 group-hover:text-emerald-400 transition-colors mb-2" />
+                  <p className="text-xs font-semibold text-zinc-200 mb-0.5">Haz clic o arrastra tu archivo de Excel aquí</p>
+                  <p className="text-[10px] text-zinc-500 mb-3">Soporta formatos .xlsx, .xls y .csv</p>
+                  <span className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold rounded-lg group-hover:bg-emerald-500 group-hover:text-white transition-all">
+                    Seleccionar Archivo Excel
+                  </span>
+                </div>
+              </div>
+
+              {/* Previsualización de Datos leídos */}
+              {clientesAImportar.length > 0 && (
+                <div className="space-y-3 border-t border-white/10 pt-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-zinc-300">
+                      Previsualización ({clientesAImportar.length} registros listos)
+                    </span>
+                    <button
+                      onClick={() => setClientesAImportar([])}
+                      className="text-xs text-red-400 hover:text-red-300 underline"
+                    >
+                      Limpiar selección
+                    </button>
+                  </div>
+
+                  <div className="max-h-48 overflow-y-auto border border-border-table rounded-lg bg-black/30">
+                    <table className="w-full text-xs text-left">
+                      <thead className="bg-black/50 text-zinc-400 sticky top-0 border-b border-border-table uppercase text-[10px]">
+                        <tr>
+                          <th className="px-3 py-2">Fila</th>
+                          <th className="px-3 py-2">Nombre</th>
+                          <th className="px-3 py-2">Correo</th>
+                          <th className="px-3 py-2">Tipo</th>
+                          <th className="px-3 py-2">RFC</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border-table text-zinc-300">
+                        {clientesAImportar.map((c, i) => (
+                          <tr key={i} className="hover:bg-white/5">
+                            <td className="px-3 py-1.5 text-zinc-500 font-mono">#{c.rowNum}</td>
+                            <td className="px-3 py-1.5 font-medium text-white">{c.nombre || <span className="text-red-400 font-bold">Sin nombre</span>}</td>
+                            <td className="px-3 py-1.5">{c.correo || "-"}</td>
+                            <td className="px-3 py-1.5 uppercase text-[10px]">{c.tipo_cliente}</td>
+                            <td className="px-3 py-1.5 font-mono">{c.rfc || "-"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Resultado de la importación */}
+              {resultadoImportacion && (
+                <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 space-y-2">
+                  <div className="flex items-center gap-2 text-emerald-400 font-semibold text-sm">
+                    <CheckCircle2 className="w-5 h-5" />
+                    {resultadoImportacion.mensaje}
+                  </div>
+                  {resultadoImportacion.errores && resultadoImportacion.errores.length > 0 && (
+                    <div className="mt-2 text-xs text-zinc-400 space-y-1">
+                      <p className="font-semibold text-amber-400">Observaciones / Alertas:</p>
+                      <ul className="list-disc list-inside max-h-28 overflow-y-auto space-y-0.5 text-[11px] text-zinc-300">
+                        {resultadoImportacion.errores.map((err: string, i: number) => (
+                          <li key={i}>{err}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Botones de Acción Footer */}
+              <div className="pt-2 flex items-center justify-end gap-3 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsImportModalOpen(false);
+                    setClientesAImportar([]);
+                    setResultadoImportacion(null);
+                  }}
+                  className="px-4 py-2 border border-border-table rounded-md text-sm font-medium text-zinc-300 hover:bg-white/5 transition-colors"
+                >
+                  Cerrar
+                </button>
+
+                <button
+                  type="button"
+                  disabled={clientesAImportar.length === 0 || importando}
+                  onClick={ejecutarImportacion}
+                  className="flex items-center gap-2 px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:pointer-events-none text-white rounded-md text-sm font-medium transition-colors shadow-sm"
+                >
+                  {importando ? (
+                    <>Procesando importación...</>
+                  ) : (
+                    <>
+                      <FileSpreadsheet className="w-4 h-4" />
+                      Importar {clientesAImportar.length > 0 ? `${clientesAImportar.length} Clientes` : ""}
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         )}

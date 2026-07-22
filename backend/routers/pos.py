@@ -1,3 +1,4 @@
+import sqlite3
 from database import get_db_connection, generar_folio
 from routers.pagos import (
     _calcular_saldo_deuda,
@@ -158,6 +159,7 @@ def procesar_checkout_pos(checkout: CheckoutPOS):
 
     conexion = get_db_connection()
     try:
+        conexion.row_factory = sqlite3.Row
         cursor = conexion.cursor()
         
         # Obtener o crear cliente

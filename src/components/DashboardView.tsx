@@ -13,7 +13,7 @@ interface DashboardMetrics {
   cuentas_por_cobrar: number;
   cursos_activos: number;
   participantes_inscritos: number;
-  flujo_mensual: { name: string; ingresos: number; por_cobrar: number }[];
+  flujo_mensual: { name: string; ingresos: number; por_cobrar: number; egresos?: number }[];
 }
 
 export function DashboardView({ onNavigate }: DashboardViewProps) {
@@ -151,6 +151,10 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
                 <div className="w-3 h-3 rounded-full bg-amber-500"></div>
                 <span className="text-zinc-400">Cuentas por cobrar</span>
               </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                <span className="text-zinc-400">Egresos</span>
+              </div>
             </div>
           </div>
           <div className="h-72 w-full flex-1">
@@ -177,6 +181,7 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
                 />
                 <Area type="monotone" dataKey="ingresos" name="Ingresos" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.2} strokeWidth={2} />
                 <Area type="monotone" dataKey="por_cobrar" name="Cuentas por cobrar" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.12} strokeWidth={2} />
+                <Area type="monotone" dataKey="egresos" name="Egresos" stroke="#ef4444" fill="#ef4444" fillOpacity={0.2} strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
