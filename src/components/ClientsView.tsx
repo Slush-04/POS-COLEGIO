@@ -112,7 +112,7 @@ export function ClientsView() {
         correo: clienteSeleccionado.correo || "",
         razon_social: clienteSeleccionado.razon_social || "",
         rfc: clienteSeleccionado.rfc || "",
-        codigo_postal: "", 
+        codigo_postal: "",
         regimen_fiscal: clienteSeleccionado.regimen_fiscal || "",
         uso_cfdi: clienteSeleccionado.uso_cfdi || "G03",
         estatus_operativo: clienteSeleccionado.estatus_operativo || "Activo",
@@ -266,7 +266,7 @@ export function ClientsView() {
 
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      resultado = resultado.filter(c => 
+      resultado = resultado.filter(c =>
         (c.nombre || "").toLowerCase().includes(term) ||
         (c.rfc || "").toLowerCase().includes(term) ||
         (c.telefono || "").toLowerCase().includes(term) ||
@@ -349,7 +349,7 @@ export function ClientsView() {
   const handleSubmit = async (e) => {
     e.preventDefault(); // Evita que la página se recargue
 
-    const url = clienteSeleccionado 
+    const url = clienteSeleccionado
       ? `http://127.0.0.1:8000/api/clientes/${clienteSeleccionado.id_cliente}`
       : "http://127.0.0.1:8000/api/clientes";
     const method = clienteSeleccionado ? "PUT" : "POST";
@@ -403,7 +403,7 @@ export function ClientsView() {
           <p className="text-zinc-400 mt-1">Gestionar perfiles de facturación de estudiantes y clientes.</p>
         </div>
         <div className="flex items-center gap-3">
-          <button 
+          <button
             onClick={() => {
               setClientesAImportar([]);
               setResultadoImportacion(null);
@@ -415,7 +415,7 @@ export function ClientsView() {
             Importar Excel
           </button>
 
-          <button 
+          <button
             onClick={() => {
               setClienteSeleccionado(null);
               handleLimpiar();
@@ -441,7 +441,7 @@ export function ClientsView() {
                     {clienteSeleccionado ? "Editar Registro" : "Añadir Nuevo Registro"}
                   </h2>
                 </div>
-                <button 
+                <button
                   onClick={() => {
                     handleLimpiar();
                     setClienteSeleccionado(null);
@@ -454,284 +454,284 @@ export function ClientsView() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Section 1 */}
-            <section className="space-y-5 rounded-xl border border-border-table bg-zinc-900/30 p-5">
-              <div>
-                <h3 className="label-caps">Perfil del cliente</h3>
-                <p className="mt-1 text-xs text-zinc-500">Identificación, contacto y situación operativa.</p>
-              </div>
+                {/* Section 1 */}
+                <section className="space-y-5 rounded-xl border border-border-table bg-zinc-900/30 p-5">
+                  <div>
+                    <h3 className="label-caps">Perfil del cliente</h3>
+                    <p className="mt-1 text-xs text-zinc-500">Identificación, contacto y situación operativa.</p>
+                  </div>
 
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-zinc-300">Nombre Completo / Nombre del Estudiante *</label>
-                <input
-                  type="text"
-                  name="nombre"
-                  value={formData.nombre}
-                  onChange={handleChange}
-                  required
-                  placeholder="ej. Juan Pérez"
-                  className="w-full px-3 py-2 bg-zinc-900/50 border border-border-table rounded-md text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-zinc-300">CURP</label>
-                  <input
-                    type="text"
-                    name="curp"
-                    value={formData.curp}
-                    onChange={handleChange}
-                    placeholder="ABCD123456EFGHIJ78"
-                    className="w-full px-3 py-2 bg-zinc-900/50 border border-border-table rounded-md text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all uppercase"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-zinc-300">Tipo de Cliente *</label>
-                  <div className="relative">
-                    <select
-                      name="tipo_cliente"
-                      value={formData.tipo_cliente}
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-zinc-300">Nombre Completo / Nombre del Estudiante *</label>
+                    <input
+                      type="text"
+                      name="nombre"
+                      value={formData.nombre}
                       onChange={handleChange}
                       required
-                      className="w-full px-3 py-2 bg-zinc-900/50 border border-border-table rounded-md text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none"
-                    >
-                      <option value="" className="bg-zinc-900">Seleccionar...</option>
-                      <option value="publico general" className="bg-zinc-900">Público general</option>
-                      <option value="asociado" className="bg-zinc-900">Asociado</option>
-                      <option value="asociado externo" className="bg-zinc-900">Asociado externo</option>
-                      <option value="colaborador" className="bg-zinc-900">Colaborador</option>
-                      <option value="estudiante" className="bg-zinc-900">Estudiante</option>
-                    </select>
-                    <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-zinc-500">
-                      <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" fillRule="evenodd"></path></svg>
+                      placeholder="ej. Juan Pérez"
+                      className="w-full px-3 py-2 bg-zinc-900/50 border border-border-table rounded-md text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-zinc-300">CURP</label>
+                      <input
+                        type="text"
+                        name="curp"
+                        value={formData.curp}
+                        onChange={handleChange}
+                        placeholder="ABCD123456EFGHIJ78"
+                        className="w-full px-3 py-2 bg-zinc-900/50 border border-border-table rounded-md text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all uppercase"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-zinc-300">Tipo de Cliente *</label>
+                      <div className="relative">
+                        <select
+                          name="tipo_cliente"
+                          value={formData.tipo_cliente}
+                          onChange={handleChange}
+                          required
+                          className="w-full px-3 py-2 bg-zinc-900/50 border border-border-table rounded-md text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none"
+                        >
+                          <option value="" className="bg-zinc-900">Seleccionar...</option>
+                          <option value="publico general" className="bg-zinc-900">Público general</option>
+                          <option value="asociado" className="bg-zinc-900">Asociado</option>
+                          <option value="asociado externo" className="bg-zinc-900">Asociado externo</option>
+                          <option value="colaborador" className="bg-zinc-900">Colaborador</option>
+                          <option value="estudiante" className="bg-zinc-900">Estudiante</option>
+                        </select>
+                        <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-zinc-500">
+                          <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" fillRule="evenodd"></path></svg>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-zinc-300">Género</label>
+                      <select
+                        name="genero"
+                        value={formData.genero}
+                        onChange={handleChange}
+                        className="w-full px-3 py-2 bg-zinc-900/50 border border-border-table rounded-md text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                      >
+                        <option value="" className="bg-zinc-900">Seleccionar...</option>
+                        <option value="Masculino" className="bg-zinc-900">Masculino</option>
+                        <option value="Femenino" className="bg-zinc-900">Femenino</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-zinc-300">Fecha de nacimiento</label>
+                      <input
+                        type="date"
+                        name="fecha_nacimiento"
+                        value={formData.fecha_nacimiento}
+                        onChange={handleChange}
+                        max={new Date().toISOString().slice(0, 10)}
+                        className="w-full px-3 py-2 bg-zinc-900/50 border border-border-table rounded-md text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all [color-scheme:dark]"
+                      />
                     </div>
                   </div>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-zinc-300">Género</label>
-                  <select
-                    name="genero"
-                    value={formData.genero}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 bg-zinc-900/50 border border-border-table rounded-md text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                  >
-                    <option value="" className="bg-zinc-900">Seleccionar...</option>
-                    <option value="Masculino" className="bg-zinc-900">Masculino</option>
-                    <option value="Femenino" className="bg-zinc-900">Femenino</option>
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-zinc-300">Fecha de nacimiento</label>
-                  <input
-                    type="date"
-                    name="fecha_nacimiento"
-                    value={formData.fecha_nacimiento}
-                    onChange={handleChange}
-                    max={new Date().toISOString().slice(0, 10)}
-                    className="w-full px-3 py-2 bg-zinc-900/50 border border-border-table rounded-md text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all [color-scheme:dark]"
-                  />
-                </div>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-zinc-300">Estatus Operativo</label>
-                  <div className="relative">
-                    <select
-                      name="estatus_operativo"
-                      value={formData.estatus_operativo}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-zinc-300">Estatus Operativo</label>
+                      <div className="relative">
+                        <select
+                          name="estatus_operativo"
+                          value={formData.estatus_operativo}
+                          onChange={handleChange}
+                          className="w-full px-3 py-2 bg-zinc-900/50 border border-border-table rounded-md text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none"
+                        >
+                          <option value="Activo" className="bg-zinc-900">Activo</option>
+                          <option value="Inactivo" className="bg-zinc-900">Inactivo</option>
+                        </select>
+                        <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-zinc-500">
+                          <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" fillRule="evenodd"></path></svg>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-zinc-300">Sector</label>
+                      <div className="relative">
+                        <select
+                          name="sector"
+                          value={formData.sector}
+                          onChange={handleChange}
+                          className="w-full px-3 py-2 bg-zinc-900/50 border border-border-table rounded-md text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none"
+                        >
+                          {sectores.length > 0 ? (
+                            sectores.map((sec) => (
+                              <option key={sec.id} value={sec.nombre} className="bg-zinc-900">
+                                {sec.nombre}
+                              </option>
+                            ))
+                          ) : (
+                            <>
+                              <option value="Normal" className="bg-zinc-900">Normal</option>
+                              <option value="Gubernamental" className="bg-zinc-900">Gubernamental</option>
+                              <option value="Capacitadoras" className="bg-zinc-900">Capacitadoras</option>
+                            </>
+                          )}
+                        </select>
+                        <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-zinc-500">
+                          <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" fillRule="evenodd"></path></svg>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-zinc-300">Número de Teléfono</label>
+                      <input
+                        type="text"
+                        name="telefono"
+                        value={formData.telefono}
+                        onChange={handleChange}
+                        placeholder="+1 (555) 000-0000"
+                        className="w-full px-3 py-2 bg-zinc-900/50 border border-border-table rounded-md text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-zinc-300">Correo Electrónico *</label>
+                      <input
+                        type="email"
+                        name="correo"
+                        value={formData.correo}
+                        onChange={handleChange}
+                        required
+                        placeholder="juan@ejemplo.com"
+                        className="w-full px-3 py-2 bg-zinc-900/50 border border-border-table rounded-md text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                      />
+                    </div>
+                  </div>
+                </section>
+
+                {/* Section 2 */}
+                <section className="space-y-5 rounded-xl border border-border-table bg-zinc-900/30 p-5">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="label-caps">Datos de facturación (SAT)</h3>
+                      <p className="mt-1 text-xs text-zinc-500">Solo se requieren al emitir una factura.</p>
+                    </div>
+                    <span className="text-[10px] font-medium bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded uppercase border border-white/10">Opcional</span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-zinc-300">Razón Social</label>
+                    <input
+                      type="text"
+                      name="razon_social"
+                      value={formData.razon_social}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 bg-zinc-900/50 border border-border-table rounded-md text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none"
-                    >
-                      <option value="Activo" className="bg-zinc-900">Activo</option>
-                      <option value="Inactivo" className="bg-zinc-900">Inactivo</option>
-                    </select>
-                    <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-zinc-500">
-                      <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" fillRule="evenodd"></path></svg>
+                      placeholder="Nombre de la Entidad Legal"
+                      className="w-full px-3 py-2 bg-zinc-900/50 border border-border-table rounded-md text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-zinc-300">RFC</label>
+                      <input
+                        type="text"
+                        name="rfc"
+                        value={formData.rfc}
+                        onChange={handleChange}
+                        placeholder="XAXX010101000"
+                        className="w-full px-3 py-2 bg-zinc-900/50 border border-border-table rounded-md text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all uppercase"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-zinc-300">Código Postal</label>
+                      <input
+                        type="text"
+                        name="codigo_postal"
+                        value={formData.codigo_postal}
+                        onChange={handleChange}
+                        placeholder="00000"
+                        className="w-full px-3 py-2 bg-zinc-900/50 border border-border-table rounded-md text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                      />
                     </div>
                   </div>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-zinc-300">Sector</label>
-                  <div className="relative">
-                    <select
-                      name="sector"
-                      value={formData.sector}
-                      onChange={handleChange}
-                      className="w-full px-3 py-2 bg-zinc-900/50 border border-border-table rounded-md text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none"
-                    >
-                      {sectores.length > 0 ? (
-                        sectores.map((sec) => (
-                          <option key={sec.id} value={sec.nombre} className="bg-zinc-900">
-                            {sec.nombre}
-                          </option>
-                        ))
-                      ) : (
-                        <>
-                          <option value="Normal" className="bg-zinc-900">Normal</option>
-                          <option value="Gubernamental" className="bg-zinc-900">Gubernamental</option>
-                          <option value="Capacitadoras" className="bg-zinc-900">Capacitadoras</option>
-                        </>
-                      )}
-                    </select>
-                    <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-zinc-500">
-                      <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" fillRule="evenodd"></path></svg>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-zinc-300">Régimen Fiscal</label>
+                      <div className="relative">
+                        <select
+                          name="regimen_fiscal"
+                          value={formData.regimen_fiscal}
+                          onChange={handleChange}
+                          className="w-full px-3 py-2 bg-zinc-900/50 border border-border-table rounded-md text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none"
+                        >
+                          <option value="" className="bg-zinc-900">Seleccionar Régimen...</option>
+                          <option value="601" className="bg-zinc-900">601 - General de Ley Personas Morales</option>
+                          <option value="603" className="bg-zinc-900">603 - Personas Morales con Fines no Lucrativos</option>
+                          <option value="605" className="bg-zinc-900">605 - Sueldos y Salarios e Ingresos Asimilados a Salarios</option>
+                          <option value="606" className="bg-zinc-900">606 - Arrendamiento</option>
+                          <option value="608" className="bg-zinc-900">608 - Demás ingresos</option>
+                          <option value="612" className="bg-zinc-900">612 - Personas Físicas con Actividades Empresariales y Profesionales</option>
+                          <option value="616" className="bg-zinc-900">616 - Sin obligaciones fiscales</option>
+                          <option value="621" className="bg-zinc-900">621 - Incorporación Fiscal</option>
+                          <option value="622" className="bg-zinc-900">622 - Actividades Agrícolas, Ganaderas, Silvícolas y Pesqueras</option>
+                          <option value="626" className="bg-zinc-900">626 - Régimen Simplificado de Confianza</option>
+                        </select>
+                        <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-zinc-500">
+                          <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" fillRule="evenodd"></path></svg>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-zinc-300">Uso de CFDI</label>
+                      <div className="relative">
+                        <select
+                          name="uso_cfdi"
+                          value={formData.uso_cfdi}
+                          onChange={handleChange}
+                          className="w-full px-3 py-2 bg-zinc-900/50 border border-border-table rounded-md text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none"
+                        >
+                          <option value="" className="bg-zinc-900">Seleccionar Uso de CFDI...</option>
+                          <option value="G01" className="bg-zinc-900">G01 - Adquisición de mercancias</option>
+                          <option value="G02" className="bg-zinc-900">G02 - Devoluciones, descuentos o bonificaciones</option>
+                          <option value="G03" className="bg-zinc-900">G03 - Gastos en general</option>
+                          <option value="I01" className="bg-zinc-900">I01 - Construcciones</option>
+                          <option value="I02" className="bg-zinc-900">I02 - Mobilario y equipo de oficina por inversiones</option>
+                          <option value="I03" className="bg-zinc-900">I03 - Equipo de transporte</option>
+                          <option value="I04" className="bg-zinc-900">I04 - Equipo de computo y accesorios</option>
+                          <option value="D01" className="bg-zinc-900">D01 - Honorarios médicos, dentales y gastos hospitalarios</option>
+                          <option value="D02" className="bg-zinc-900">D02 - Gastos médicos por incapacidad o discapacidad</option>
+                          <option value="D10" className="bg-zinc-900">D10 - Pagos por servicios educativos (colegiaturas)</option>
+                          <option value="S01" className="bg-zinc-900">S01 - Sin efectos fiscales</option>
+                          <option value="CP01" className="bg-zinc-900">CP01 - Pagos</option>
+                        </select>
+                        <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-zinc-500">
+                          <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" fillRule="evenodd"></path></svg>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
+                </section>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-zinc-300">Número de Teléfono</label>
-                  <input
-                    type="text"
-                    name="telefono"
-                    value={formData.telefono}
-                    onChange={handleChange}
-                    placeholder="+1 (555) 000-0000"
-                    className="w-full px-3 py-2 bg-zinc-900/50 border border-border-table rounded-md text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-zinc-300">Correo Electrónico *</label>
-                  <input
-                    type="email"
-                    name="correo"
-                    value={formData.correo}
-                    onChange={handleChange}
-                    required
-                    placeholder="juan@ejemplo.com"
-                    className="w-full px-3 py-2 bg-zinc-900/50 border border-border-table rounded-md text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                  />
-                </div>
-              </div>
-            </section>
-
-            {/* Section 2 */}
-            <section className="space-y-5 rounded-xl border border-border-table bg-zinc-900/30 p-5">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="label-caps">Datos de facturación (SAT)</h3>
-                  <p className="mt-1 text-xs text-zinc-500">Solo se requieren al emitir una factura.</p>
-                </div>
-                <span className="text-[10px] font-medium bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded uppercase border border-white/10">Opcional</span>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-zinc-300">Razón Social</label>
-                <input
-                  type="text"
-                  name="razon_social"
-                  value={formData.razon_social}
-                  onChange={handleChange}
-                  placeholder="Nombre de la Entidad Legal"
-                  className="w-full px-3 py-2 bg-zinc-900/50 border border-border-table rounded-md text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-zinc-300">RFC</label>
-                  <input
-                    type="text"
-                    name="rfc"
-                    value={formData.rfc}
-                    onChange={handleChange}
-                    placeholder="XAXX010101000"
-                    className="w-full px-3 py-2 bg-zinc-900/50 border border-border-table rounded-md text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all uppercase"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-zinc-300">Código Postal</label>
-                  <input
-                    type="text"
-                    name="codigo_postal"
-                    value={formData.codigo_postal}
-                    onChange={handleChange}
-                    placeholder="00000"
-                    className="w-full px-3 py-2 bg-zinc-900/50 border border-border-table rounded-md text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-zinc-300">Régimen Fiscal</label>
-                <div className="relative">
-                  <select
-                    name="regimen_fiscal"
-                    value={formData.regimen_fiscal}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 bg-zinc-900/50 border border-border-table rounded-md text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none"
+                <div className="pt-4 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleLimpiar();
+                      setClienteSeleccionado(null);
+                      setIsModalOpen(false);
+                    }}
+                    className="px-4 py-2 border border-border-table rounded-md text-sm font-medium text-zinc-300 hover:bg-white/5 transition-colors"
                   >
-                    <option value="" className="bg-zinc-900">Seleccionar Régimen...</option>
-                    <option value="601" className="bg-zinc-900">601 - General de Ley Personas Morales</option>
-                    <option value="603" className="bg-zinc-900">603 - Personas Morales con Fines no Lucrativos</option>
-                    <option value="605" className="bg-zinc-900">605 - Sueldos y Salarios e Ingresos Asimilados a Salarios</option>
-                    <option value="606" className="bg-zinc-900">606 - Arrendamiento</option>
-                    <option value="608" className="bg-zinc-900">608 - Demás ingresos</option>
-                    <option value="612" className="bg-zinc-900">612 - Personas Físicas con Actividades Empresariales y Profesionales</option>
-                    <option value="616" className="bg-zinc-900">616 - Sin obligaciones fiscales</option>
-                    <option value="621" className="bg-zinc-900">621 - Incorporación Fiscal</option>
-                    <option value="622" className="bg-zinc-900">622 - Actividades Agrícolas, Ganaderas, Silvícolas y Pesqueras</option>
-                    <option value="626" className="bg-zinc-900">626 - Régimen Simplificado de Confianza</option>
-                  </select>
-                  <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-zinc-500">
-                    <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" fillRule="evenodd"></path></svg>
-                  </div>
+                    Cancelar
+                  </button>
+                  <button type="submit" className="px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-md text-sm font-medium transition-colors shadow-sm">
+                    Guardar Cliente
+                  </button>
                 </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-zinc-300">Uso de CFDI</label>
-                <div className="relative">
-                  <select
-                    name="uso_cfdi"
-                    value={formData.uso_cfdi}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 bg-zinc-900/50 border border-border-table rounded-md text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all appearance-none"
-                  >
-                    <option value="" className="bg-zinc-900">Seleccionar Uso de CFDI...</option>
-                    <option value="G01" className="bg-zinc-900">G01 - Adquisición de mercancias</option>
-                    <option value="G02" className="bg-zinc-900">G02 - Devoluciones, descuentos o bonificaciones</option>
-                    <option value="G03" className="bg-zinc-900">G03 - Gastos en general</option>
-                    <option value="I01" className="bg-zinc-900">I01 - Construcciones</option>
-                    <option value="I02" className="bg-zinc-900">I02 - Mobilario y equipo de oficina por inversiones</option>
-                    <option value="I03" className="bg-zinc-900">I03 - Equipo de transporte</option>
-                    <option value="I04" className="bg-zinc-900">I04 - Equipo de computo y accesorios</option>
-                    <option value="D01" className="bg-zinc-900">D01 - Honorarios médicos, dentales y gastos hospitalarios</option>
-                    <option value="D02" className="bg-zinc-900">D02 - Gastos médicos por incapacidad o discapacidad</option>
-                    <option value="D10" className="bg-zinc-900">D10 - Pagos por servicios educativos (colegiaturas)</option>
-                    <option value="S01" className="bg-zinc-900">S01 - Sin efectos fiscales</option>
-                    <option value="CP01" className="bg-zinc-900">CP01 - Pagos</option>
-                  </select>
-                  <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-zinc-500">
-                    <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" fillRule="evenodd"></path></svg>
-                  </div>
-                </div>
-              </div>
-              </div>
-            </section>
-
-            <div className="pt-4 flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  handleLimpiar();
-                  setClienteSeleccionado(null);
-                  setIsModalOpen(false);
-                }}
-                className="px-4 py-2 border border-border-table rounded-md text-sm font-medium text-zinc-300 hover:bg-white/5 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button type="submit" className="px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-md text-sm font-medium transition-colors shadow-sm">
-                Guardar Cliente
-              </button>
-            </div>
-          </form>
+              </form>
             </div>
           </div>
         )}
@@ -743,15 +743,12 @@ export function ClientsView() {
               {/* Header Modal */}
               <div className="flex items-center justify-between border-b border-white/10 pb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-                    <FileSpreadsheet className="w-5 h-5" />
-                  </div>
                   <div>
                     <h2 className="text-lg font-bold text-white">Importar Clientes mediante Excel</h2>
                     <p className="text-xs text-zinc-400">Carga masiva de directorio mediante archivo .xlsx o .csv</p>
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={() => {
                     setIsImportModalOpen(false);
                     setClientesAImportar([]);
@@ -767,7 +764,6 @@ export function ClientsView() {
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
                 <div className="space-y-1 text-center sm:text-left">
                   <h3 className="text-sm font-semibold text-emerald-300 flex items-center gap-1.5 justify-center sm:justify-start">
-                    <Download className="w-4 h-4" />
                     Obtener Formato de Excel Modelo
                   </h3>
                   <p className="text-xs text-zinc-400">
@@ -783,48 +779,6 @@ export function ClientsView() {
                   Descargar Plantilla (.xlsx)
                 </button>
               </div>
-
-              {/* Guía de Formato Requerido */}
-              <div className="rounded-xl border border-border-table bg-zinc-900/40 p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-300 flex items-center gap-2">
-                    <HelpCircle className="w-4 h-4 text-blue-400" />
-                    Estructura y Columnas Requeridas del Documento
-                  </h3>
-                  <span className="text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded border border-white/10">Instrucciones</span>
-                </div>
-                <p className="text-xs text-zinc-400">
-                  El archivo debe contener una fila de encabezados en la primera hoja con exactamente o variaciones de los siguientes nombres de columna:
-                </p>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 text-xs pt-1">
-                  <div className="p-2.5 rounded-lg bg-black/30 border border-white/5 space-y-1">
-                    <span className="font-semibold text-emerald-400">Nombre *</span>
-                    <p className="text-[10px] text-zinc-400">Nombre completo del cliente / estudiante (Obligatorio).</p>
-                  </div>
-                  <div className="p-2.5 rounded-lg bg-black/30 border border-white/5 space-y-1">
-                    <span className="font-semibold text-emerald-400">Correo *</span>
-                    <p className="text-[10px] text-zinc-400">Correo de contacto principal (Obligatorio).</p>
-                  </div>
-                  <div className="p-2.5 rounded-lg bg-black/30 border border-white/5 space-y-1">
-                    <span className="font-semibold text-zinc-300">Tipo Cliente</span>
-                    <p className="text-[10px] text-zinc-500">publico general, asociado, estudiante, colaborador, asociado externo.</p>
-                  </div>
-                  <div className="p-2.5 rounded-lg bg-black/30 border border-white/5 space-y-1">
-                    <span className="font-semibold text-zinc-300">RFC / CURP</span>
-                    <p className="text-[10px] text-zinc-500">Claves fiscales únicas. RFCs existentes serán omitidos para evitar duplicados.</p>
-                  </div>
-                  <div className="p-2.5 rounded-lg bg-black/30 border border-white/5 space-y-1">
-                    <span className="font-semibold text-zinc-300">Telefono / Razon Social</span>
-                    <p className="text-[10px] text-zinc-500">Datos complementarios de contacto y facturación.</p>
-                  </div>
-                  <div className="p-2.5 rounded-lg bg-black/30 border border-white/5 space-y-1">
-                    <span className="font-semibold text-zinc-300">Fecha Nacimiento</span>
-                    <p className="text-[10px] text-zinc-500">Formato AAAA-MM-DD (ej. 1990-05-15).</p>
-                  </div>
-                </div>
-              </div>
-
               {/* Zona de Carga de Archivo */}
               <div className="space-y-3">
                 <input
@@ -834,7 +788,7 @@ export function ClientsView() {
                   className="hidden"
                   onChange={handleFileUpload}
                 />
-                
+
                 <div
                   onClick={() => fileInputRef.current?.click()}
                   onDragOver={(e) => e.preventDefault()}
@@ -947,7 +901,6 @@ export function ClientsView() {
                     <>Procesando importación...</>
                   ) : (
                     <>
-                      <FileSpreadsheet className="w-4 h-4" />
                       Importar {clientesAImportar.length > 0 ? `${clientesAImportar.length} Clientes` : ""}
                     </>
                   )}
@@ -973,7 +926,7 @@ export function ClientsView() {
             </div>
             <div className="flex items-center gap-2">
               <div className="relative">
-                <button 
+                <button
                   onClick={() => setIsFilterOpen(!isFilterOpen)}
                   className={`p-2 text-zinc-400 hover:bg-white/5 rounded-md transition-colors border ${isFilterOpen ? 'bg-white/10 border-white/20' : 'border-transparent hover:border-white/10'}`}
                 >
@@ -984,13 +937,13 @@ export function ClientsView() {
                     <div>
                       <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">Ordenar A-Z</h4>
                       <div className="flex gap-2">
-                        <button 
+                        <button
                           onClick={() => setOrdenAlfabetico(ordenAlfabetico === 'asc' ? null : 'asc')}
                           className={`flex-1 py-1 px-2 rounded text-xs font-medium border ${ordenAlfabetico === 'asc' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-zinc-800 text-zinc-300 border-zinc-700 hover:bg-zinc-700'}`}
                         >
                           A - Z
                         </button>
-                        <button 
+                        <button
                           onClick={() => setOrdenAlfabetico(ordenAlfabetico === 'desc' ? null : 'desc')}
                           className={`flex-1 py-1 px-2 rounded text-xs font-medium border ${ordenAlfabetico === 'desc' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : 'bg-zinc-800 text-zinc-300 border-zinc-700 hover:bg-zinc-700'}`}
                         >
@@ -1000,7 +953,7 @@ export function ClientsView() {
                     </div>
                     <div>
                       <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">Tipo de Cliente</h4>
-                      <select 
+                      <select
                         value={filtroTipoCliente}
                         onChange={(e) => setFiltroTipoCliente(e.target.value)}
                         className="w-full px-2 py-1.5 bg-zinc-800 border border-zinc-700 rounded text-sm text-white focus:outline-none focus:border-blue-500"
@@ -1051,15 +1004,14 @@ export function ClientsView() {
                           {client.uso_cfdi || "G03"}
                         </span>
                         {client.tipo_cliente && (
-                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded-sm text-[10px] font-medium border ${
-                            client.tipo_cliente === 'asociado' || client.tipo_cliente === 'asociado externo'
-                              ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
-                              : client.tipo_cliente === 'estudiante'
+                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded-sm text-[10px] font-medium border ${client.tipo_cliente === 'asociado' || client.tipo_cliente === 'asociado externo'
+                            ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                            : client.tipo_cliente === 'estudiante'
                               ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
                               : client.tipo_cliente === 'colaborador'
-                              ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30'
-                              : 'bg-slate-500/30 text-slate-300 border-slate-500/40'
-                          }`}>
+                                ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30'
+                                : 'bg-slate-500/30 text-slate-300 border-slate-500/40'
+                            }`}>
                             {client.tipo_cliente.charAt(0).toUpperCase() + client.tipo_cliente.slice(1)}
                           </span>
                         )}
@@ -1070,7 +1022,7 @@ export function ClientsView() {
                       <div className="text-zinc-500 text-xs mt-0.5">{client.curp || "Sin CURP"}</div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button 
+                      <button
                         onClick={() => {
                           setClienteSeleccionado(client);
                           setIsModalOpen(true);

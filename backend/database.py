@@ -347,6 +347,70 @@ def inicializar_base_datos():
             INSERT OR IGNORE INTO configuracion_sectores (nombre) VALUES (?)
         ''', (sector,))
 
+    # 16. CONFIGURACIÓN DE TIPOS DE CLIENTE
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS configuracion_tipos_cliente (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT UNIQUE NOT NULL
+        )
+    ''')
+    for tipo in ["publico general", "asociado", "asociado externo", "colaborador", "estudiante"]:
+        cursor.execute('''
+            INSERT OR IGNORE INTO configuracion_tipos_cliente (nombre) VALUES (?)
+        ''', (tipo,))
+
+    # 17. CONFIGURACIÓN DE REGÍMENES FISCALES
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS configuracion_regimenes_fiscales (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            clave TEXT UNIQUE NOT NULL,
+            descripcion TEXT NOT NULL
+        )
+    ''')
+    regimenes_semilla = [
+        ("601", "General de Ley Personas Morales"),
+        ("603", "Personas Morales con Fines no Lucrativos"),
+        ("605", "Sueldos y Salarios e Ingresos Asimilados a Salarios"),
+        ("606", "Arrendamiento"),
+        ("608", "Demás ingresos"),
+        ("612", "Personas Físicas con Actividades Empresariales y Profesionales"),
+        ("616", "Sin obligaciones fiscales"),
+        ("621", "Incorporación Fiscal"),
+        ("622", "Actividades Agrícolas, Ganaderas, Silvícolas y Pesqueras"),
+        ("626", "Régimen Simplificado de Confianza"),
+    ]
+    for clave, desc in regimenes_semilla:
+        cursor.execute('''
+            INSERT OR IGNORE INTO configuracion_regimenes_fiscales (clave, descripcion) VALUES (?, ?)
+        ''', (clave, desc))
+
+    # 18. CONFIGURACIÓN DE USOS DE CFDI
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS configuracion_usos_cfdi (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            clave TEXT UNIQUE NOT NULL,
+            descripcion TEXT NOT NULL
+        )
+    ''')
+    usos_semilla = [
+        ("G01", "Adquisición de mercancias"),
+        ("G02", "Devoluciones, descuentos o bonificaciones"),
+        ("G03", "Gastos en general"),
+        ("I01", "Construcciones"),
+        ("I02", "Mobilario y equipo de oficina por inversiones"),
+        ("I03", "Equipo de transporte"),
+        ("I04", "Equipo de computo y accesorios"),
+        ("D01", "Honorarios médicos, dentales y gastos hospitalarios"),
+        ("D02", "Gastos médicos por incapacidad o discapacidad"),
+        ("D10", "Pagos por servicios educativos (colegiaturas)"),
+        ("S01", "Sin efectos fiscales"),
+        ("CP01", "Pagos"),
+    ]
+    for clave, desc in usos_semilla:
+        cursor.execute('''
+            INSERT OR IGNORE INTO configuracion_usos_cfdi (clave, descripcion) VALUES (?, ?)
+        ''', (clave, desc))
+
     for clave, nombre, prefijo in [
         ("V", "Ventas de contado", "V"),
         ("VC", "Ventas a cuenta", "VC"),

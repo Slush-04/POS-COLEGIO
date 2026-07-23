@@ -1,4 +1,4 @@
-import { ClipboardList, Download, UserPlus, DollarSign, Plus, Edit2 } from "lucide-react";
+import { ClipboardList, Download, UserPlus, DollarSign, Plus, Edit2, FileSpreadsheet } from "lucide-react";
 import { useState, useEffect } from "react";
 import { ModalNuevoCurso } from "./ModalNuevoCurso";
 import { ModalPago } from "../Panel_Deudas/modalpagos_v1";
@@ -271,9 +271,9 @@ export function CoursesView() {
                 onClick={() => setIsImportarExcelOpen(true)}
                 disabled={(cursoSeleccionado.estatus || 'ACTIVO').toUpperCase() === 'CERRADO'}
                 title={(cursoSeleccionado.estatus || 'ACTIVO').toUpperCase() === 'CERRADO' ? 'El curso está cerrado' : undefined}
-                className="flex items-center gap-2 px-4 py-2 bg-zinc-900 border border-border-table hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed text-zinc-300 rounded-md text-sm font-medium transition-colors"
+                className="flex items-center gap-2 px-4 py-2 border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-custom text-sm font-medium transition-colors shadow-sm"
               >
-                <Download className="w-4 h-4" />
+                <FileSpreadsheet className="w-4 h-4" />
                 Importar Excel
               </button>
               <button

@@ -1,5 +1,6 @@
 import { type RefObject, useRef, useState } from "react";
 import { Save } from "lucide-react";
+import { CatalogSettings } from "./settings/CatalogSettings";
 import { FiscalSettings, FiscalSettingsHandle } from "./settings/FiscalSettings";
 import { InventorySettings } from "./settings/InventorySettings";
 import { NotificationSettings } from "./settings/NotificationSettings";
@@ -46,6 +47,8 @@ function SettingsPanel({ activeTab, operationSettingsRef, fiscalSettingsRef }: {
       return <FiscalSettings ref={fiscalSettingsRef} />;
     case "operation":
       return <OperationFolioSettings ref={operationSettingsRef} />;
+    case "catalogs":
+      return <CatalogSettings />;
     case "notifications":
       return <NotificationSettings />;
     case "inventory":

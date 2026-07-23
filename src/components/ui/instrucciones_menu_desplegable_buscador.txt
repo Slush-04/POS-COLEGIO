@@ -1,0 +1,42 @@
+Implementa un componente de menú desplegable con buscador integrado, inspirado en un command menu moderno.
+
+Debe incluir:
+
+1. Contenedor flotante
+- Bordes redondeados.
+- Fondo adaptable al tema actual.
+- Sombra suave o borde sutil.
+- Padding interno.
+- Altura máxima con scroll interno.
+
+2. Barra de búsqueda superior
+- Siempre ubicada arriba del listado.
+- Icono de lupa a la izquierda.
+- Placeholder configurable.
+- Fondo ligeramente distinto al contenedor.
+- Bordes redondeados.
+- Al escribir, filtra las opciones disponibles.
+- Al abrir el menú, el input debe recibir foco automáticamente.
+
+3. Lista de opciones
+Cada opción debe mostrar:
+- Icono a la izquierda.
+- Texto principal al centro.
+- Texto secundario o atajo a la derecha, opcional.
+- Hover suave con fondo sutil y bordes redondeados.
+- Click para seleccionar la opción.
+
+4. Scroll
+- El listado debe tener scroll interno si excede la altura máxima.
+- Scrollbar delgada y discreta.
+- La barra de búsqueda no debe perderse visualmente.
+
+5. Accesibilidad
+- Navegación con teclado.
+- Flechas arriba/abajo para seleccionar.
+- Enter para confirmar.
+- Escape para cerrar.
+- Mensaje de “Sin resultados” cuando el filtro no encuentre opciones.
+
+6. Adaptación al diseño
+No usar colores rígidos. Usar tokens, variables CSS o clases existentes del proyecto para que el menú se adapte al diseño actual. Mantener el modelo visual: buscador superior, opciones con icono, texto y acción secundaria alineada a la derecha.

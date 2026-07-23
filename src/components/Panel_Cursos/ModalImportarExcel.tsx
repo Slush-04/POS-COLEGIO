@@ -23,7 +23,7 @@ export function ModalImportarExcel({ isOpen, onClose, onSuccess, curso }: ModalI
       { Nombre: "Ejemplo: Juan Perez", RFC: "XAXX010101000", Telefono: "5551234567", Correo: "juan@ejemplo.com", "Tipo Tarifa": "asociado" }
     ];
     const ws = XLSX.utils.json_to_sheet(data);
-    
+
     // Ajustar ancho de columnas
     const wscols = [
       { wch: 30 }, // Nombre
@@ -51,12 +51,12 @@ export function ModalImportarExcel({ isOpen, onClose, onSuccess, curso }: ModalI
       const wsname = wb.SheetNames[0];
       const ws = wb.Sheets[wsname];
       const data = XLSX.utils.sheet_to_json(ws);
-      
+
       const mappedData = data.map((row: any) => {
         const nombre = row["Nombre"] || row["nombre"] || "";
         const rfc = row["RFC"] || row["rfc"] || "";
         const telefono = row["Telefono"] || row["Teléfono"] || row["telefono"] || "";
-        
+
         let tarifaStr = (row["Tipo Tarifa"] || row["tarifa"] || "general").toString().toLowerCase();
         let tipoTarifa = "general";
         if (tarifaStr.includes("asociado externo")) tipoTarifa = "asociado_externo";
@@ -76,7 +76,7 @@ export function ModalImportarExcel({ isOpen, onClose, onSuccess, curso }: ModalI
 
         return { nombre, rfc, telefono, tipo_tarifa: tipoTarifa, monto_total: montoTotal, estado_pago: estadoPago };
       }).filter(r => r.nombre !== "" && !r.nombre.includes("Ejemplo:"));
-      
+
       setParsedData(mappedData);
     };
     reader.readAsBinaryString(uploadedFile);
@@ -124,7 +124,7 @@ export function ModalImportarExcel({ isOpen, onClose, onSuccess, curso }: ModalI
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="bg-white/[0.045] backdrop-blur-xl border border-white/12 rounded-xl shadow-[0_16px_45px_rgba(0,0,0,0.22)] w-full max-w-4xl max-h-[90vh] flex flex-col">
-        
+
         <div className="flex items-center justify-between p-6 border-b border-border-table bg-zinc-900/50">
           <div>
             <h2 className="text-xl font-bold text-white tracking-tight">Importar Participantes (Excel)</h2>
@@ -136,7 +136,7 @@ export function ModalImportarExcel({ isOpen, onClose, onSuccess, curso }: ModalI
         </div>
 
         <div className="p-6 flex-1 overflow-y-auto space-y-6">
-          
+
           <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-lg flex gap-3">
             <AlertCircle className="w-5 h-5 text-blue-400 flex-shrink-0" />
             <div>
@@ -144,19 +144,19 @@ export function ModalImportarExcel({ isOpen, onClose, onSuccess, curso }: ModalI
               <p className="text-xs text-blue-300/80 mt-1">
                 Asegúrate de que las columnas de tu Excel coincidan con las del formato oficial. Puedes omitir columnas que no sean obligatorias (como Teléfono). El sistema inferirá el precio correcto basándose en la tarifa.
               </p>
-              <button 
+              <button
                 onClick={handleDescargarFormato}
-                className="mt-3 flex items-center gap-2 px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 text-xs font-bold rounded-md transition-colors"
+                className="mt-3 flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-lg transition-colors shadow-md"
               >
                 <Download className="w-4 h-4" />
-                Descargar Formato de Ejemplo
+                Descargar Plantilla (.xlsx)
               </button>
             </div>
           </div>
 
-          <div className="border-2 border-dashed border-border-table rounded-xl p-8 flex flex-col items-center justify-center bg-zinc-900/30 hover:bg-zinc-800/30 transition-colors">
-            <FileSpreadsheet className="w-12 h-12 text-zinc-500 mb-4" />
-            <p className="text-sm text-zinc-400 font-medium mb-1">Arrastra tu archivo Excel aquí o</p>
+          <div className="border-2 border-white/15 border-dashed hover:border-emerald-400/50 rounded-xl p-8 flex flex-col items-center justify-center bg-black/20 hover:bg-black/40 transition-all cursor-pointer group">
+            <UploadCloud className="w-12 h-12 text-zinc-500 mb-4" />
+            <p className="text-sm text-zinc-400 font-medium mb-1">Haz clic o arrastra tu archivo de Excel aquí</p>
             <label className="cursor-pointer">
               <span className="text-primary hover:text-primary-hover font-bold text-sm underline transition-colors">Selecciona un archivo</span>
               <input type="file" accept=".xlsx, .xls, .csv" onChange={handleFileUpload} className="hidden" />
@@ -216,8 +216,8 @@ export function ModalImportarExcel({ isOpen, onClose, onSuccess, curso }: ModalI
           <button type="button" onClick={onClose} className="px-5 py-2.5 text-sm font-medium text-zinc-300 hover:text-white transition-colors">
             Cancelar
           </button>
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={handleImportar}
             disabled={parsedData.length === 0 || isProcessing}
             className="px-6 py-2.5 bg-primary hover:bg-primary-hover disabled:bg-zinc-800 disabled:text-zinc-500 text-white rounded-lg text-sm font-bold shadow-md transition-colors flex items-center gap-2"

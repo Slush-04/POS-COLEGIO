@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
-import { Building2, Mail, Package, Palette, Receipt } from "lucide-react";
+import { BookOpen, Building2, Mail, Package, Palette, Receipt } from "lucide-react";
 
-export type SettingsTab = "fiscal" | "operation" | "notifications" | "inventory";
+export type SettingsTab = "fiscal" | "operation" | "catalogs" | "notifications" | "inventory";
 
 interface SettingsLayoutProps {
   activeTab: SettingsTab;
@@ -13,6 +13,7 @@ interface SettingsLayoutProps {
 const tabs = [
   { id: "fiscal" as const, label: "Datos Fiscales", icon: Building2 },
   { id: "operation" as const, label: "Operación y Folios", icon: Receipt },
+  { id: "catalogs" as const, label: "Catálogos de Clientes", icon: BookOpen },
   { id: "notifications" as const, label: "Notificaciones", icon: Mail },
   { id: "inventory" as const, label: "Catálogo / Inventario", icon: Package },
 ];
